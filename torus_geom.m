@@ -13,7 +13,7 @@
 % Andrew P. Witkin and Paul S. Heckbert, Proc. SIGGRAPH '94
 %​
 % number of particles
-N = 150;
+N = 500;
 % params
 Alpha = 2;
 Sigma = 0.5;
@@ -51,19 +51,36 @@ while cnt < N
     X(cnt, :) = [(R + r*cos(Theta))*cos(Phi), (R + r*cos(Theta))*sin(Phi), r*sin(Theta)]; 
 end
 
-%preload visualizer (for static surfaces)
-    theta_num = 36;
-    phi_num = 18;
-    theta_grid = linspace(0, 2*pi, theta_num);
-    phi_grid = linspace(0, 2*pi, phi_num);
+% preload pathfinder (for static surfaces)
+if(isfile("torus_mesh.mat"))
+    load("torus_mesh.mat");
+else
+    mesh_theta_num = 80;
+    mesh_phi_num = 40;
+    theta_grid = linspace(0, 2*pi, mesh_theta_num);
+    phi_grid = linspace(0, 2*pi, mesh_phi_num);
     [Phi_mesh, Theta_mesh] = meshgrid(phi_grid, theta_grid); 
-    x = (R+r.*cos(Theta_mesh)).*cos(Phi_mesh);
-    y = (R+r.*cos(Theta_mesh)).*sin(Phi_mesh);
-    z = r.*sin(Theta_mesh);
-    mat = adj_mat(x,y,z);
+    mesh_x = (R+r.*cos(Theta_mesh)).*cos(Phi_mesh);
+    mesh_y = (R+r.*cos(Theta_mesh)).*sin(Phi_mesh);
+    mesh_z = r.*sin(Theta_mesh);
+    mat = adj_mat_torus(mesh_x,mesh_y,mesh_z);
     [dist_mat, next] = FloydWarshall(mat);
+    save torus_mesh.mat mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
+end
+% preload visualizer mesh (not computationally intensive)
+theta_num = 36;
+phi_num = 18;
+theta_grid = linspace(0, 2*pi, theta_num);
+phi_grid = linspace(0, 2*pi, phi_num);
+[Phi_mesh, Theta_mesh] = meshgrid(phi_grid, theta_grid); 
+vis_x = (R+r.*cos(Theta_mesh)).*cos(Phi_mesh);
+vis_y = (R+r.*cos(Theta_mesh)).*sin(Phi_mesh);
+vis_z = r.*sin(Theta_mesh);
+
 % visualize
-visualize(X, 0, pt_1_idx, pt_2_idx,x,y,z,phi_num, next, [-10 10], [-10 10], [-3 3]);
+% visualize_surface(X,0,vis_x,vis_y,vis_z, [-10 10], [-10 10], [-3 3]);
+% visualize_random_path(X, 0, pt_1_idx, pt_2_idx,vis_x,vis_y,vis_z,phi_num, next, [-10 10], [-10 10], [-3 3]);
+visualize_geodesic_heatmap(X,0,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z,pt_1_idx,[-10 10], [-10 10], [-3 3], dist_mat);
 t = 0;
 itr = 0;
 while t < totT
@@ -101,12 +118,12 @@ while t < totT
     
     t = t + deltaT;
     itr = itr + 1;
-    visualize(X, itr, pt_1_idx, pt_2_idx,x,y,z,phi_num, next, [-10 10], [-10 10], [-3 3]);
-    
+%     visualize(X, itr, pt_1_idx, pt_2_idx,x,y,z,phi_num, next, [-10 10], [-10 10], [-3 3]);
+    visualize_geodesic_heatmap(X,itr,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z,pt_1_idx,[-10 10], [-10 10], [-3 3], dist_mat);
 end
 
 
-function [adj_mat] = adj_mat(x,y,z)
+function [adj_mat] = adj_mat_torus(x,y,z)
     sz = size(x);
     height = sz(1);
     width = sz(2);

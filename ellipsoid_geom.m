@@ -11,7 +11,7 @@
 %
 
 % number of particles
-N = 50;
+N = 150;
 
 % params
 Alpha = 2;
@@ -49,21 +49,35 @@ while cnt < N
     X(cnt, :) = [a*cos(Theta)*sin(Phi), b*sin(Theta)*sin(Phi), c*cos(Phi)]; %ellipsoid parametrization
 end
 
-%preload visualizer (for static surfaces)
+% preload pathfinder (for static surfaces)
+if(isfile("ellipsoid_mesh.mat"))
+    load("ellipsoid_mesh.mat");
+else
+    mesh_theta_num = 80;
+    mesh_phi_num = 40;
+    theta_grid = linspace(0, 2*pi, mesh_theta_num);
+    phi_grid = linspace(0, pi, mesh_phi_num);
+    [Phi_mesh, Theta_mesh] = meshgrid(phi_grid, theta_grid); 
+    mesh_x = a .*cos(Theta_mesh).*sin(Phi_mesh);
+    mesh_y = b.*sin(Theta_mesh).*sin(Phi_mesh);
+    mesh_z = c.*cos(Phi_mesh);
+    mat = adj_mat_ellipsoid(mesh_x,mesh_y,mesh_z);
+    [dist_mat, next] = FloydWarshall(mat);
+    save ellipsoid_mesh.mat mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
+end
+%preload visualizer (not computationally expensive)
     theta_num = 36;
     phi_num = 18;
     theta_grid = linspace(0, 2*pi, theta_num);
     phi_grid = linspace(0, pi, phi_num);
     [Phi_mesh, Theta_mesh] = meshgrid(phi_grid, theta_grid); 
-    x = a .*cos(Theta_mesh).*sin(Phi_mesh);
-    y = b.*sin(Theta_mesh).*sin(Phi_mesh);
-    z = c.*cos(Phi_mesh);
-    prev_x = x;
-    mat = adj_mat(x,y,z);
-    [dist_mat, next] = FloydWarshall(mat);
+    vis_x = a .*cos(Theta_mesh).*sin(Phi_mesh);
+    vis_y = b.*sin(Theta_mesh).*sin(Phi_mesh);
+    vis_z = c.*cos(Phi_mesh);
     
 % visualize
-visualize(X, 0, pt_1_idx, pt_2_idx,x,y,z,phi_num, next, [-30 30], [-30 30], [-30 30]);
+% visualize(X, 0, pt_1_idx, pt_2_idx,x,y,z,phi_num, next, [-30 30], [-30 30], [-30 30]);
+visualize_geodesic_heatmap(X,0,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z,pt_1_idx, [-30 30], [-30 30], [-30 30], dist_mat);
 t = 0;
 itr = 0;
 
@@ -102,10 +116,11 @@ while t < totT
     
     t = t + deltaT;
     itr = itr + 1;
-    visualize(X, itr, pt_1_idx, pt_2_idx,x,y,z,phi_num, next, [-30 30], [-30 30], [-30 30]);
+%     visualize(X, itr, pt_1_idx, pt_2_idx,x,y,z,phi_num, next, [-30 30], [-30 30], [-30 30]);
+visualize_geodesic_heatmap(X,itr,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z,pt_1_idx,[-30 30], [-30 30], [-30 30], dist_mat);
 end
 
-function [adj_mat] = adj_mat(x,y,z)
+function [adj_mat] = adj_mat_ellipsoid(x,y,z)
     sz = size(x);
     height = sz(1);
     width = sz(2);
