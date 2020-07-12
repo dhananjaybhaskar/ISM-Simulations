@@ -1,13 +1,15 @@
-function [] = visualize_random_path(X, itr, pt_1_idx, pt_2_idx,vis_x,vis_y,vis_z, mesh_x, mesh_y, mesh_z, num_cols, next, x_limits, y_limits, z_limits)
+function [] = visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, ...
+                                        num_cols, next, x_limits, y_limits, z_limits)
+
     point_1 = X(pt_1_idx, :);
     point_2 = X(pt_2_idx, :);
-    [~, point_1_mesh_idx] = closest_mesh_point(point_1,mesh_x,mesh_y,mesh_z);
-
-    [~, point_2_mesh_idx] = closest_mesh_point(point_2,mesh_x,mesh_y,mesh_z);
     
-
-    translated_path_idxes = compute_path(next,point_1_mesh_idx,point_2_mesh_idx,num_cols);
+    [~, point_1_mesh_idx] = closest_mesh_point(point_1, mesh_x, mesh_y, mesh_z);
+    [~, point_2_mesh_idx] = closest_mesh_point(point_2, mesh_x, mesh_y, mesh_z);
+    
+    translated_path_idxes = compute_path(next, point_1_mesh_idx, point_2_mesh_idx, num_cols);
     len = length(translated_path_idxes);
+    
     path_matrix_x = zeros(len + 2, 1);
     path_matrix_y = path_matrix_x;
     path_matrix_z = path_matrix_x;
@@ -38,4 +40,5 @@ function [] = visualize_random_path(X, itr, pt_1_idx, pt_2_idx,vis_x,vis_y,vis_z
     plot3(path_matrix_x, path_matrix_y, path_matrix_z, 'r', 'LineWidth',2);
     fname = strcat('sim_', sprintf('%03d',itr), '.png');
     saveas(fig, fname, 'png');
+    
 end

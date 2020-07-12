@@ -1,13 +1,7 @@
 %
 % Agent-based model of constrained particle motion on an ellipsoid
-% Author: Tej Stead
+% Authors: Tej Stead, Dhananjay Bhaskar
 % Last Modified: Jul 10, 2020
-%
-
-%
-% TODO: simulate simple repulsion model on implicit surface
-% TODO: compute geodesic distance between particles
-% TODO: plot surface curvature
 %
 
 % number of particles
@@ -32,10 +26,11 @@ dFdX = zeros(N, 3);
 dFdq = zeros(N, 3);
 dXdt = zeros(N, 3);
 
+% pick random particle
 pt_1_idx = floor(rand()*N) + 1;
 pt_2_idx = floor(rand()*N) + 1;
 
-%uniform distribution of (Theta, Phi) in [0,2pi] for initial position
+% uniform distribution of (Theta, Phi) in [0, 2pi] for initial position
 cnt = 0;
 a = q(1);
 b = q(2);
@@ -46,10 +41,10 @@ while cnt < N
     Theta = 2*pi*U;
     Phi = pi*V;
     cnt = cnt + 1;
-    X(cnt, :) = [a*cos(Theta)*sin(Phi), b*sin(Theta)*sin(Phi), c*cos(Phi)]; %ellipsoid parametrization
+    X(cnt, :) = [a*cos(Theta)*sin(Phi), b*sin(Theta)*sin(Phi), c*cos(Phi)];
 end
 
-% preload pathfinder (for static surfaces)
+% preload pairwise geodesic distances between mesh points (for static surfaces)
 if(isfile("ellipsoid_mesh.mat"))
     load("ellipsoid_mesh.mat");
 else
@@ -58,26 +53,27 @@ else
     theta_grid = linspace(0, 2*pi, mesh_theta_num);
     phi_grid = linspace(0, pi, mesh_phi_num);
     [Phi_mesh, Theta_mesh] = meshgrid(phi_grid, theta_grid); 
-    mesh_x = a .*cos(Theta_mesh).*sin(Phi_mesh);
+    mesh_x = a.*cos(Theta_mesh).*sin(Phi_mesh);
     mesh_y = b.*sin(Theta_mesh).*sin(Phi_mesh);
     mesh_z = c.*cos(Phi_mesh);
-    mat = adj_mat_ellipsoid(mesh_x,mesh_y,mesh_z);
+    mat = adj_mat_ellipsoid(mesh_x, mesh_y, mesh_z);
     [dist_mat, next] = FloydWarshall(mat);
     save ellipsoid_mesh.mat mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
 end
-%preload visualizer (not computationally expensive)
-    theta_num = 36;
-    phi_num = 18;
-    theta_grid = linspace(0, 2*pi, theta_num);
-    phi_grid = linspace(0, pi, phi_num);
-    [Phi_mesh, Theta_mesh] = meshgrid(phi_grid, theta_grid); 
-    vis_x = a .*cos(Theta_mesh).*sin(Phi_mesh);
-    vis_y = b.*sin(Theta_mesh).*sin(Phi_mesh);
-    vis_z = c.*cos(Phi_mesh);
+
+% preload coarse mesh for visualization
+theta_num = 36;
+phi_num = 18;
+theta_grid = linspace(0, 2*pi, theta_num);
+phi_grid = linspace(0, pi, phi_num);
+[Phi_mesh, Theta_mesh] = meshgrid(phi_grid, theta_grid); 
+vis_x = a .*cos(Theta_mesh).*sin(Phi_mesh);
+vis_y = b.*sin(Theta_mesh).*sin(Phi_mesh);
+vis_z = c.*cos(Phi_mesh);
     
-% visualize
-% visualize(X, 0, pt_1_idx, pt_2_idx,x,y,z,phi_num, next, [-30 30], [-30 30], [-30 30]);
-visualize_geodesic_heatmap(X,0,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z,pt_1_idx, [-30 30], [-30 30], [-30 30], dist_mat);
+% visualize IC
+visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_mat);
+
 t = 0;
 itr = 0;
 
@@ -89,7 +85,7 @@ while t < totT
         P(i,:) = [0, 0, 0]; 
         for j = 1 : N
             Fij = Alpha*exp(-1.0*norm((X(i,:)-X(j,:)))/(2*Sigma^2));
-            P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij; %directional energy
+            P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
         end
 
         F(i) = (X(i,1)^2/a^2) + (X(i, 2)^2/b^2) + (X(i,3)^2/c^2) - 1;
@@ -116,21 +112,22 @@ while t < totT
     
     t = t + deltaT;
     itr = itr + 1;
-%     visualize(X, itr, pt_1_idx, pt_2_idx,x,y,z,phi_num, next, [-30 30], [-30 30], [-30 30]);
-visualize_geodesic_heatmap(X,itr,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z,pt_1_idx,[-30 30], [-30 30], [-30 30], dist_mat);
+    
+    visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_mat);
+
 end
 
-function [adj_mat] = adj_mat_ellipsoid(x,y,z)
+function [adj_mat] = adj_mat_ellipsoid(x, y, z)
+
     sz = size(x);
     height = sz(1);
     width = sz(2);
     adj_mat = inf*ones(height*width, height*width);
+    
     for i = 1:height
         for j = 1:width
             dx = [-1 -1 -1 0 0 0 1 1 1];
             dy = [-1 0 1 -1 0 1 -1 0 1];
-%               dx = [-1 0 0 0 1];
-%               dy = [0 -1 0 1 0];
             for k = 1:numel(dx)
                 new_i = mod(i+dy(k) - 1, height) + 1; 
                 new_j = j + dx(k);
@@ -142,4 +139,5 @@ function [adj_mat] = adj_mat_ellipsoid(x,y,z)
             end
         end
     end
+    
 end

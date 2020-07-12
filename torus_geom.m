@@ -1,19 +1,14 @@
 %
 % Agent-based model of particle movement on implicit surface (torus)
-% Author: Dhananjay Bhaskar
-% Last Modified: Jan 04, 2020
+% Authors: Dhananjay Bhaskar, Tej Stead
+% Last Modified: Jul 11, 2020
 % Reference: Using Particles to Sample and Control Implicit Surfaces
 % Andrew P. Witkin and Paul S. Heckbert, Proc. SIGGRAPH '94
 %
 
-% Agent-based model of particle movement on implicit surface (torus)
-% Authors: Dhananjay Bhaskar, Tej Stead
-% Last Modified: Jul 09, 2020
-% Reference: Using Particles to Sample and Control Implicit Surfaces
-% Andrew P. Witkin and Paul S. Heckbert, Proc. SIGGRAPH '94
-%​
 % number of particles
 N = 500;
+
 % params
 Alpha = 2;
 Sigma = 0.5;
@@ -33,6 +28,7 @@ dFdX = zeros(N, 3);
 dFdq = zeros(N, 2);
 dXdt = zeros(N, 3);
 
+% pick a random particle
 pt_1_idx = floor(rand()*N) + 1;
 pt_2_idx = floor(rand()*N) + 1;
 
@@ -51,7 +47,7 @@ while cnt < N
     X(cnt, :) = [(R + r*cos(Theta))*cos(Phi), (R + r*cos(Theta))*sin(Phi), r*sin(Theta)]; 
 end
 
-% preload pathfinder (for static surfaces)
+% preload pairwise geodesic distance between mesh points (for static surfaces)
 if(isfile("torus_mesh.mat"))
     load("torus_mesh.mat");
 else
@@ -67,7 +63,8 @@ else
     [dist_mat, next] = FloydWarshall(mat);
     save torus_mesh.mat mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
 end
-% preload visualizer mesh (not computationally intensive)
+
+% create coarse mesh for visualization
 theta_num = 36;
 phi_num = 18;
 theta_grid = linspace(0, 2*pi, theta_num);
@@ -77,16 +74,17 @@ vis_x = (R+r.*cos(Theta_mesh)).*cos(Phi_mesh);
 vis_y = (R+r.*cos(Theta_mesh)).*sin(Phi_mesh);
 vis_z = r.*sin(Theta_mesh);
 
-% visualize
-% visualize_surface(X,0,vis_x,vis_y,vis_z, [-10 10], [-10 10], [-3 3]);
-% visualize_random_path(X, 0, pt_1_idx, pt_2_idx,vis_x,vis_y,vis_z,phi_num, next, [-10 10], [-10 10], [-3 3]);
-visualize_geodesic_heatmap(X,0,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z,pt_1_idx,[-10 10], [-10 10], [-3 3], dist_mat);
+% visualize IC
+% visualize_surface(X, 0, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
+% visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, phi_num, next, [-10 10], [-10 10], [-3 3]);
+visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_mat);
+
 t = 0;
 itr = 0;
+
 while t < totT
 
     % compute updated state vectors
-        % compute updated state vectors
     for i = 1 : N
 
         P(i,:) = [0, 0, 0]; 
@@ -118,22 +116,23 @@ while t < totT
     
     t = t + deltaT;
     itr = itr + 1;
-%     visualize(X, itr, pt_1_idx, pt_2_idx,x,y,z,phi_num, next, [-10 10], [-10 10], [-3 3]);
-    visualize_geodesic_heatmap(X,itr,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z,pt_1_idx,[-10 10], [-10 10], [-3 3], dist_mat);
+    
+    visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_mat);
+    
 end
 
 
-function [adj_mat] = adj_mat_torus(x,y,z)
+function [adj_mat] = adj_mat_torus(x, y, z)
+
     sz = size(x);
     height = sz(1);
     width = sz(2);
     adj_mat = inf*ones(height*width, height*width);
+    
     for i = 1:height
         for j = 1:width
             dx = [-1 -1 -1 0 0 0 1 1 1];
             dy = [-1 0 1 -1 0 1 -1 0 1];
-%               dx = [-1 0 0 0 1];
-%               dy = [0 -1 0 1 0];
             for k = 1:numel(dx)
                 new_i = mod(i+dy(k) - 1, height) + 1; 
                 new_j = mod(j+dx(k) - 1, width) + 1;
@@ -142,4 +141,5 @@ function [adj_mat] = adj_mat_torus(x,y,z)
             end
         end
     end
+    
 end
