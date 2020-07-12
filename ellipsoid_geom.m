@@ -4,8 +4,11 @@
 % Last Modified: Jul 10, 2020
 %
 
+% seed RNG
+rng(1337);
+
 % number of particles
-N = 150;
+N = 50;
 
 % params
 Alpha = 2;
@@ -60,6 +63,7 @@ else
     [dist_mat, next] = FloydWarshall(mat);
     save ellipsoid_mesh.mat mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
 end
+dist_range = [0 max(dist_mat(:))];
 
 % preload coarse mesh for visualization
 theta_num = 36;
@@ -72,7 +76,8 @@ vis_y = b.*sin(Theta_mesh).*sin(Phi_mesh);
 vis_z = c.*cos(Phi_mesh);
     
 % visualize IC
-visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_mat);
+visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, phi_num, next, [-10 10], [-10 10], [-3 3]);
+% visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_range, dist_mat);
 
 t = 0;
 itr = 0;
@@ -113,7 +118,8 @@ while t < totT
     t = t + deltaT;
     itr = itr + 1;
     
-    visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_mat);
+    visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, phi_num, next, [-10 10], [-10 10], [-3 3]);
+    % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_range, dist_mat);
 
 end
 

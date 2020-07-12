@@ -37,7 +37,7 @@ function [] = visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, 
     zlim(z_limits)
     hold on;
     scatter3(X(:,1), X(:,2), X(:,3));
-    plot3(path_matrix_x, path_matrix_y, path_matrix_z, 'r', 'LineWidth',2);
+    plot3(path_matrix_x, path_matrix_y, path_matrix_z, 'r', 'LineWidth', 1.5);
     fname = strcat('sim_', sprintf('%03d',itr), '.png');
     saveas(fig, fname, 'png');
     
