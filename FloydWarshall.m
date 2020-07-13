@@ -1,6 +1,8 @@
 function [D, next] = FloydWarshall(D)
+
     next = zeros(size(D));
     len = length(D);
+    
     for i = 1:len
         for j = 1:len
             if(D(i,j) ~= inf)
@@ -8,6 +10,7 @@ function [D, next] = FloydWarshall(D)
             end
         end
     end
+    
     for k = 1:len
         for i = 1:len
             for j = 1:len
@@ -19,4 +22,5 @@ function [D, next] = FloydWarshall(D)
             end
         end
     end
+    
 end
