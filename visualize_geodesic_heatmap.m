@@ -1,4 +1,4 @@
-function visualize_geodesic_heatmap(X, itr, vis_x,vis_y,vis_z, mesh_x, mesh_y, mesh_z, pt_index, x_limits, y_limits, z_limits, dist_mat)
+function visualize_geodesic_heatmap(X, itr, mesh_x, mesh_y, mesh_z, pt_index, x_limits, y_limits, z_limits, dist_mat, color_axis)
 
     source_pt_coords = X(pt_index, :);
     [min_dist, mesh_idx] = closest_mesh_point(source_pt_coords, mesh_x,mesh_y,mesh_z);
@@ -13,8 +13,10 @@ function visualize_geodesic_heatmap(X, itr, vis_x,vis_y,vis_z, mesh_x, mesh_y, m
     fig = figure('visible', 'off');
 %     figure(1);
     surf(mesh_x, mesh_y, mesh_z, heatmap);
+    caxis(color_axis);
+    colorbar
     hold on;
-    mesh(vis_x, vis_y, vis_z, 'edgecolor', 'k');
+%     mesh(vis_x, vis_y, vis_z, 'edgecolor', 'k');
     alpha 0.75;
     daspect([1 1 1])
     xlim(x_limits)
