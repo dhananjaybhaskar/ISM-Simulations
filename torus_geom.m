@@ -7,7 +7,7 @@
 %
 
 % seed RNG
-rng(1337)
+rng(42)
 
 % number of particles
 N = 200;
@@ -31,9 +31,11 @@ dFdX = zeros(N, 3);
 dFdq = zeros(N, 2);
 dXdt = zeros(N, 3);
 
-% pick a random particle
+% pick random particles
 pt_1_idx = floor(rand()*N) + 1;
 pt_2_idx = floor(rand()*N) + 1;
+pt_3_idx = floor(rand()*N) + 1;
+pt_4_idx = floor(rand()*N) + 1;
 
 % use rejection sampling for initial position
 % https://math.stackexchange.com/questions/2017079/uniform-random-points-on-a-torus

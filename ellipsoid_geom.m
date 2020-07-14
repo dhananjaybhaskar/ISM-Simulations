@@ -5,7 +5,7 @@
 %
 
 % seed RNG
-rng(1337);
+rng(31337);
 
 % number of particles
 N = 50;
@@ -32,6 +32,8 @@ dXdt = zeros(N, 3);
 % pick random particle
 pt_1_idx = floor(rand()*N) + 1;
 pt_2_idx = floor(rand()*N) + 1;
+pt_3_idx = floor(rand()*N) + 1;
+pt_4_idx = floor(rand()*N) + 1;
 
 % uniform distribution of (Theta, Phi) in [0, 2pi] for initial position
 cnt = 0;
@@ -84,9 +86,9 @@ M_curvature = mean_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, q);
 M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
 
 % visualize IC
-visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-30 30], [-30 30], [-30 30]);
+visualize_geodesic_path(X, 0, [pt_1_idx pt_3_idx], [pt_2_idx pt_4_idx], vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-30 30], [-30 30], [-30 30]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_range, dist_mat);
-% visualize_curvature_heatmap(X,0,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-30 30], [-30 30], [-30 30], G_color_limits, G_curvature);
+% visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-30 30], [-30 30], [-30 30], G_color_limits, G_curvature);
 
 t = 0;
 itr = 0;
@@ -127,7 +129,7 @@ while t < totT
     t = t + deltaT;
     itr = itr + 1;
     
-    visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-30 30], [-30 30], [-30 30]);
+    visualize_geodesic_path(X, itr, [pt_1_idx pt_3_idx], [pt_2_idx pt_4_idx], vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-30 30], [-30 30], [-30 30]);
     % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_range, dist_mat);
 
 end
@@ -159,7 +161,7 @@ end
 
 function [curvature] = gaussian_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, q)
 
-    %  Reference: https://mathworld.wolfram.com/Ellipsoid.html 
+    % Reference: https://mathworld.wolfram.com/Ellipsoid.html 
     % Using polar coordinates for consistency with mean curvature, implementation is
     % tidier with Cartesian coordinates
     a = q(1);

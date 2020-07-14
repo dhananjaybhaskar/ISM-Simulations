@@ -17,7 +17,7 @@ function [translated_path_idxes] = compute_path(next, i, j, num_cols)
     
     for i = 1:numel(Path)
         assert(Path(i) ~= 0);
-        translated_path_idxes(i, 2) = mod(Path(i), num_cols);
+        translated_path_idxes(i, 2) = mod(Path(i) - 1, num_cols) + 1;
         translated_path_idxes(i, 1) = (Path(i) - translated_path_idxes(i,2))/num_cols + 1;
     end
     
