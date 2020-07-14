@@ -19,6 +19,7 @@ function [] = visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, 
     path_matrix_z(1) = point_1(3);
     
     for i = 2:(length(translated_path_idxes) + 1)
+        % DEBUG: disp([translated_path_idxes(i - 1, 1), translated_path_idxes(i - 1, 2)])
         path_matrix_x(i) = mesh_x(translated_path_idxes(i - 1, 1), translated_path_idxes(i - 1, 2));
         path_matrix_y(i) = mesh_y(translated_path_idxes(i - 1, 1), translated_path_idxes(i - 1, 2));
         path_matrix_z(i) = mesh_z(translated_path_idxes(i - 1, 1), translated_path_idxes(i - 1, 2));
@@ -37,7 +38,7 @@ function [] = visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, 
     zlim(z_limits)
     hold on;
     scatter3(X(:,1), X(:,2), X(:,3));
-    plot3(path_matrix_x, path_matrix_y, path_matrix_z, 'r', 'LineWidth', 1.5);
+    plot3(path_matrix_x, path_matrix_y, path_matrix_z, 'r', 'LineWidth', 1.0);
     fname = strcat('sim_', sprintf('%03d',itr), '.png');
     saveas(fig, fname, 'png');
     

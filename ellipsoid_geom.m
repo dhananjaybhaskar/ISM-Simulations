@@ -1,7 +1,7 @@
 %
 % Agent-based model of constrained particle motion on an ellipsoid
 % Authors: Tej Stead, Dhananjay Bhaskar
-% Last Modified: Jul 10, 2020
+% Last Modified: Jul 14, 2020
 %
 
 % seed RNG
@@ -76,16 +76,17 @@ vis_x = a .* cos(Theta_mesh) .* sin(Phi_mesh);
 vis_y = b .* sin(Theta_mesh) .* sin(Phi_mesh);
 vis_z = c .* cos(Phi_mesh);
     
-% visualize IC
+% compute mean and gaussian curvature
 G_curvature = gaussian_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, q);
 G_color_limits = [0 max(max(G_curvature))];
+
 M_curvature = mean_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, q);
 M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
-visualize_curvature_heatmap(X,0,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-30 30], [-30 30], [-30 30], G_color_limits, G_curvature);
-visualize_curvature_heatmap(X,1,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-30 30], [-30 30], [-30 30], M_color_limits, M_curvature);
-pause;
-% visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, phi_num, next, [-10 10], [-10 10], [-3 3]);
+
+% visualize IC
+visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-30 30], [-30 30], [-30 30]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_range, dist_mat);
+% visualize_curvature_heatmap(X,0,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-30 30], [-30 30], [-30 30], G_color_limits, G_curvature);
 
 t = 0;
 itr = 0;
@@ -126,7 +127,7 @@ while t < totT
     t = t + deltaT;
     itr = itr + 1;
     
-    visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, phi_num, next, [-10 10], [-10 10], [-3 3]);
+    visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-30 30], [-30 30], [-30 30]);
     % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_range, dist_mat);
 
 end
@@ -157,26 +158,26 @@ function [adj_mat] = adj_mat_ellipsoid(x, y, z)
 end
 
 function [curvature] = gaussian_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, q)
-    % https://mathworld.wolfram.com/Ellipsoid.html 
-    % Using angles here for consistency with mean curvature, function is
-    % much cleaner with Cartesian though
+
+    %  Reference: https://mathworld.wolfram.com/Ellipsoid.html 
+    % Using polar coordinates for consistency with mean curvature, implementation is
+    % tidier with Cartesian coordinates
     a = q(1);
     b = q(2);
     c = q(3);
-%     num = ((mesh_x.^2)/(a.^4) + (mesh_y.^2)/(b^4) + (mesh_z.^2)/(c^4)).^(-2);
-%     denom = a*b*c;
-%     curvature = num ./(denom^2);
+    
     num = (a^2) * (b^2) * (c^2);
     
     denom = (((a^2) * (b^2) * (cos(Phi_mesh_fine).^2)) ... 
         + ((c^2) * (((b^2) * (cos(Theta_mesh_fine).^2)) ... 
         + ((a^2) * (sin(Theta_mesh_fine).^2))) .* (sin(Phi_mesh_fine).^2))).^2;
     
-    curvature = num ./ denom;
+    curvature = num./denom;
+    
 end
 
 function [curvature] = mean_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, q)
-    % https://mathworld.wolfram.com/Ellipsoid.html - kind of ugly
+
     a = q(1);
     b = q(2);
     c = q(3);
@@ -189,5 +190,6 @@ function [curvature] = mean_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, 
         + ((c^2) * (((b^2) * (cos(Theta_mesh_fine).^2)) ... 
         + ((a^2) * (sin(Theta_mesh_fine).^2))) .* (sin(Phi_mesh_fine).^2))).^(3/2);
     
-    curvature = num ./ denom;
+    curvature = num./denom;
+    
 end
