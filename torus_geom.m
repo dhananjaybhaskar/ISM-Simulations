@@ -24,7 +24,7 @@ X = zeros(N, 3);
 
 % preallocate state variables
 P = zeros(N, 3);
-q = [2, 5];
+q = [5, 2];
 Q = [0.0, 0.0];
 F = zeros(N, 1);
 dFdX = zeros(N, 3);
@@ -58,13 +58,13 @@ else
     mesh_phi_num = 40;
     theta_grid = linspace(0, 2*pi, mesh_theta_num);
     phi_grid = linspace(0, 2*pi, mesh_phi_num);
-    [Phi_mesh, Theta_mesh] = meshgrid(phi_grid, theta_grid); 
-    mesh_x = (R+r.*cos(Theta_mesh)).*cos(Phi_mesh);
-    mesh_y = (R+r.*cos(Theta_mesh)).*sin(Phi_mesh);
-    mesh_z = r.*sin(Theta_mesh);
+    [Phi_mesh_fine, Theta_mesh_fine] = meshgrid(phi_grid, theta_grid); 
+    mesh_x = (R+r.*cos(Theta_mesh_fine)).*cos(Phi_mesh_fine);
+    mesh_y = (R+r.*cos(Theta_mesh_fine)).*sin(Phi_mesh_fine);
+    mesh_z = r.*sin(Theta_mesh_fine);
     mat = adj_mat_torus(mesh_x,mesh_y,mesh_z);
     [dist_mat, next] = FloydWarshall(mat);
-    save torus_mesh.mat mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
+    save torus_mesh.mat Theta_mesh_fine Phi_mesh_fine mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
 end
 dist_range = [0 max(dist_mat(:))];
 
@@ -80,7 +80,13 @@ vis_z = r.*sin(Theta_mesh);
 
 % visualize IC
 % visualize_surface(X, 0, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
-visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, phi_num, next, [-10 10], [-10 10], [-3 3]);
+G_curvature = gaussian_curvature_torus(Theta_mesh_fine, Phi_mesh_fine, q);
+G_color_limits = [min(min(G_curvature)) max(max(G_curvature))];
+M_curvature = mean_curvature_torus(Theta_mesh_fine, Phi_mesh_fine, q);
+M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
+visualize_curvature_heatmap(X,0,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-10 10], [-10 10], [-10 10], G_color_limits, G_curvature);
+visualize_curvature_heatmap(X,1,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-10 10], [-10 10], [-10 10], M_color_limits, M_curvature);
+%visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, phi_num, next, [-10 10], [-10 10], [-3 3]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
 
 t = 0;
@@ -147,4 +153,26 @@ function [adj_mat] = adj_mat_torus(x, y, z)
         end
     end
     
+end
+
+function [curvature] = gaussian_curvature_torus(Theta_mesh_fine, ~, q)
+    % Second argument is not needed but is taken for consistency with other
+    % surfaces
+    % https://mathworld.wolfram.com/Torus.html, adapted
+    r = q(1);
+    R = q(2);
+    num = cos(Theta_mesh_fine);
+    denom = r * (R + (r * cos(Theta_mesh_fine)));
+    curvature = num ./ denom;
+end
+
+function [curvature] = mean_curvature_torus(Theta_mesh_fine, ~ , q)
+    % Second argument is not needed but is taken for consistency with other
+    % surfaces
+    % https://mathworld.wolfram.com/Torus.html, adapted
+    r = q(1);
+    R = q(2);
+    num = R + (2 * r * cos(Theta_mesh_fine));
+    denom = 2 * r * (R + (r * cos(Theta_mesh_fine)));
+    curvature = num ./ denom;
 end
