@@ -55,28 +55,36 @@ else
     mesh_phi_num = 40;
     theta_grid = linspace(0, 2*pi, mesh_theta_num);
     phi_grid = linspace(0, pi, mesh_phi_num);
-    [Phi_mesh, Theta_mesh] = meshgrid(phi_grid, theta_grid); 
-    mesh_x = a.*cos(Theta_mesh).*sin(Phi_mesh);
-    mesh_y = b.*sin(Theta_mesh).*sin(Phi_mesh);
-    mesh_z = c.*cos(Phi_mesh);
+    [Phi_mesh_fine, Theta_mesh_fine] = meshgrid(phi_grid, theta_grid); 
+    mesh_x = a.*cos(Theta_mesh_fine).*sin(Phi_mesh_fine);
+    mesh_y = b.*sin(Theta_mesh_fine).*sin(Phi_mesh_fine);
+    mesh_z = c.*cos(Phi_mesh_fine);
     mat = adj_mat_ellipsoid(mesh_x, mesh_y, mesh_z);
     [dist_mat, next] = FloydWarshall(mat);
-    save ellipsoid_mesh.mat mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
+    save ellipsoid_mesh.mat mesh_theta_num mesh_phi_num mesh_x mesh_y ...
+        Phi_mesh_fine Theta_mesh_fine mesh_z mat dist_mat next;
 end
 dist_range = [0 max(dist_mat(:))];
 
 % preload coarse mesh for visualization
 theta_num = 36;
 phi_num = 18;
-theta_grid = linspace(0, 2*pi, theta_num);
+theta_grid = linspace(0, 2 * pi, theta_num);
 phi_grid = linspace(0, pi, phi_num);
 [Phi_mesh, Theta_mesh] = meshgrid(phi_grid, theta_grid); 
-vis_x = a .*cos(Theta_mesh).*sin(Phi_mesh);
-vis_y = b.*sin(Theta_mesh).*sin(Phi_mesh);
-vis_z = c.*cos(Phi_mesh);
+vis_x = a .* cos(Theta_mesh) .* sin(Phi_mesh);
+vis_y = b .* sin(Theta_mesh) .* sin(Phi_mesh);
+vis_z = c .* cos(Phi_mesh);
     
 % visualize IC
-visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, phi_num, next, [-10 10], [-10 10], [-3 3]);
+G_curvature = gaussian_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, q);
+G_color_limits = [0 max(max(G_curvature))];
+M_curvature = mean_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, q);
+M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
+visualize_curvature_heatmap(X,0,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-30 30], [-30 30], [-30 30], G_color_limits, G_curvature);
+visualize_curvature_heatmap(X,1,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-30 30], [-30 30], [-30 30], M_color_limits, M_curvature);
+pause;
+% visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, phi_num, next, [-10 10], [-10 10], [-3 3]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_range, dist_mat);
 
 t = 0;
@@ -146,4 +154,40 @@ function [adj_mat] = adj_mat_ellipsoid(x, y, z)
         end
     end
     
+end
+
+function [curvature] = gaussian_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, q)
+    % https://mathworld.wolfram.com/Ellipsoid.html 
+    % Using angles here for consistency with mean curvature, function is
+    % much cleaner with Cartesian though
+    a = q(1);
+    b = q(2);
+    c = q(3);
+%     num = ((mesh_x.^2)/(a.^4) + (mesh_y.^2)/(b^4) + (mesh_z.^2)/(c^4)).^(-2);
+%     denom = a*b*c;
+%     curvature = num ./(denom^2);
+    num = (a^2) * (b^2) * (c^2);
+    
+    denom = (((a^2) * (b^2) * (cos(Phi_mesh_fine).^2)) ... 
+        + ((c^2) * (((b^2) * (cos(Theta_mesh_fine).^2)) ... 
+        + ((a^2) * (sin(Theta_mesh_fine).^2))) .* (sin(Phi_mesh_fine).^2))).^2;
+    
+    curvature = num ./ denom;
+end
+
+function [curvature] = mean_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, q)
+    % https://mathworld.wolfram.com/Ellipsoid.html - kind of ugly
+    a = q(1);
+    b = q(2);
+    c = q(3);
+    
+    num = (a * b * c) * ((3 * ((a^2) + (b^2))) + (2 * (c^2)) ...
+        + (((a^2) + (b^2) - 2 * (c^2)) * cos(2 * Phi_mesh_fine)) ...
+        - (2 * ((a^2) - (b^2)) * cos(2 * Theta_mesh_fine) .* (sin(Phi_mesh_fine).^2)));
+    
+    denom = 8*(((a^2) * (b^2) * (cos(Phi_mesh_fine).^2)) ... 
+        + ((c^2) * (((b^2) * (cos(Theta_mesh_fine).^2)) ... 
+        + ((a^2) * (sin(Theta_mesh_fine).^2))) .* (sin(Phi_mesh_fine).^2))).^(3/2);
+    
+    curvature = num ./ denom;
 end
