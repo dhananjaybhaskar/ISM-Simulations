@@ -24,7 +24,7 @@ X = zeros(N, 3);
 
 % preallocate state variables
 P = zeros(N, 3);
-q = [2, 5];
+q = [5, 2];
 Q = [0.0, 0.0];
 F = zeros(N, 1);
 dFdX = zeros(N, 3);
@@ -51,8 +51,8 @@ while cnt < N
 end
 
 % preload pairwise geodesic distance between mesh points (for static surfaces)
-if(isfile("torus_mesh.mat"))
-    load("torus_mesh.mat");
+if(isfile("spindle_torus_mesh.mat"))
+    load("spindle_torus_mesh.mat");
 else
     mesh_theta_num = 80;
     mesh_phi_num = 40;
@@ -62,9 +62,9 @@ else
     mesh_x = (R+r.*cos(Theta_mesh_fine)).*cos(Phi_mesh_fine);
     mesh_y = (R+r.*cos(Theta_mesh_fine)).*sin(Phi_mesh_fine);
     mesh_z = r.*sin(Theta_mesh_fine);
-    mat = adj_mat_torus(mesh_x,mesh_y,mesh_z);
+    mat = adj_mat_spindle_torus(mesh_x,mesh_y,mesh_z);
     [dist_mat, next] = FloydWarshall(mat);
-    save torus_mesh.mat Theta_mesh_fine Phi_mesh_fine mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
+    save spindle_torus_mesh.mat Theta_mesh_fine Phi_mesh_fine mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
 end
 dist_range = [0 max(dist_mat(:))];
 
@@ -80,7 +80,7 @@ vis_z = r.*sin(Theta_mesh);
 
 % visualize IC
 % visualize_surface(X, 0, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
-G_curvature = gaussian_curvature_torus(Theta_mesh_fine, Phi_mesh_fine, q);
+G_curvature = gaussian_curvature_spindle_torus(Theta_mesh_fine, Phi_mesh_fine, q);
 G_color_limits = [min(min(G_curvature)) max(max(G_curvature))];
 M_curvature = mean_curvature_torus(Theta_mesh_fine, Phi_mesh_fine, q);
 M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
@@ -133,7 +133,7 @@ while t < totT
 end
 
 
-function [adj_mat] = adj_mat_torus(x, y, z)
+function [adj_mat] = adj_mat_spindle_torus(x, y, z)
 
     sz = size(x);
     height = sz(1);
@@ -155,7 +155,7 @@ function [adj_mat] = adj_mat_torus(x, y, z)
     
 end
 
-function [curvature] = gaussian_curvature_torus(Theta_mesh_fine, ~, q)
+function [curvature] = gaussian_curvature_spindle_torus(Theta_mesh_fine, ~, q)
     % Second argument is not needed but is taken for consistency with other
     % surfaces
     % https://mathworld.wolfram.com/Torus.html, adapted
@@ -166,7 +166,7 @@ function [curvature] = gaussian_curvature_torus(Theta_mesh_fine, ~, q)
     curvature = num ./ denom;
 end
 
-function [curvature] = mean_curvature_torus(Theta_mesh_fine, ~ , q)
+function [curvature] = mean_curvature_spindle_torus(Theta_mesh_fine, ~ , q)
     % Second argument is not needed but is taken for consistency with other
     % surfaces
     % https://mathworld.wolfram.com/Torus.html, adapted
