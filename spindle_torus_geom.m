@@ -24,7 +24,7 @@ X = zeros(N, 3);
 
 % preallocate state variables
 P = zeros(N, 3);
-q = [5, 2];
+q = [7, 2];
 Q = [0.0, 0.0];
 F = zeros(N, 1);
 dFdX = zeros(N, 3);
@@ -82,7 +82,7 @@ vis_z = r.*sin(Theta_mesh);
 % visualize_surface(X, 0, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
 G_curvature = gaussian_curvature_spindle_torus(Theta_mesh_fine, Phi_mesh_fine, q);
 G_color_limits = [min(min(G_curvature)) max(max(G_curvature))];
-M_curvature = mean_curvature_torus(Theta_mesh_fine, Phi_mesh_fine, q);
+M_curvature = mean_curvature_spindle_torus(Theta_mesh_fine, Phi_mesh_fine, q);
 M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
 % visualize_curvature_heatmap(X,0,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-10 10], [-10 10], [-10 10], G_color_limits, G_curvature);
 % visualize_curvature_heatmap(X,1,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-10 10], [-10 10], [-10 10], M_color_limits, M_curvature);
@@ -99,7 +99,7 @@ while t < totT
 
         P(i,:) = [0, 0, 0]; 
         for j = 1 : N
-            Fij = Alpha*exp(-1.0*norm((X(i,:)-X(j,:)))/(2*Sigma^2));
+            Fij = Alpha*exp(-1.0*(norm((X(i,:)-X(j,:)))^2)/(2*Sigma^2));
             P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
         end
 

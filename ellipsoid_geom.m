@@ -97,7 +97,7 @@ while t < totT
 
         P(i,:) = [0, 0, 0]; 
         for j = 1 : N
-            Fij = Alpha*exp(-1.0*norm((X(i,:)-X(j,:)))/(2*Sigma^2));
+            Fij = Alpha*exp(-1.0*(norm((X(i,:)-X(j,:)))^2)/(2*Sigma^2));
             P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
         end
 
