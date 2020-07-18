@@ -1,23 +1,25 @@
 function visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, ...
-                                    x_limits, y_limits, z_limits, c_limits, curvature)
+                                    x_limits, y_limits, z_limits, color_limits, curvature, display_particles)
 
-%     fig = figure('visible', 'off');
-    figure(1);
-    mesh(vis_x, vis_y, vis_z, 'EdgeColor', 'k', 'FaceColor', 'none', 'FaceAlpha', 0, 'linestyle', '-');
-    hold on;
-    surf(mesh_x, mesh_y, mesh_z, curvature, 'EdgeColor', 'none', 'FaceAlpha', 0.75, 'FaceLighting', 'gouraud', 'LineStyle', 'none');
+    fig = figure('visible', 'off');
+    surf(mesh_x, mesh_y, mesh_z, curvature, 'EdgeColor', 'interp', 'FaceColor', 'interp', ...
+        'FaceAlpha', 0.75, 'FaceLighting', 'gouraud', 'LineStyle', 'none');
     shading interp
+    hold on;
+    mesh(vis_x, vis_y, vis_z, 'EdgeColor', 'none', 'FaceColor', 'none', 'FaceAlpha', 0, 'linestyle', '-');
     daspect([1 1 1])
     xlim(x_limits)
     ylim(y_limits)
     zlim(z_limits)
-    scatter3(X(:,1), X(:,2), X(:,3), 30, 'filled');
+    if display_particles
+        scatter3(X(:,1), X(:,2), X(:,3), 30, 'filled');
+    end
     colorbar
-    caxis(c_limits)
+    caxis(color_limits)
     zoom(1.2)
     hold off;
-    pause;
-%     fname = strcat('curvature', sprintf('%03d',itr), '.png');
-%     saveas(fig, fname, 'png');
+    set(gca, 'visible', 'off')
+    fname = strcat('sim_', sprintf('%03d',itr), '.png');
+    saveas(fig, fname, 'png');
     
 end

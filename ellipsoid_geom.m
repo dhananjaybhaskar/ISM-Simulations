@@ -12,7 +12,7 @@ N = 50;
 
 % params
 Alpha = 2;
-Sigma = 1.5;
+Sigma = 3.0;
 phi = 1;
 deltaT = 0.1;
 totT = 5;
@@ -22,7 +22,7 @@ X = zeros(N, 3);
 
 % preallocate state variables
 P = zeros(N, 3);
-q = [20,15,20];
+q = [20, 15, 20];
 Q = [0.0, 0.0, 0.0];
 F = zeros(N, 1);
 dFdX = zeros(N, 3);
@@ -81,14 +81,14 @@ vis_z = c .* cos(Phi_mesh);
 % compute mean and gaussian curvature
 G_curvature = gaussian_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, q);
 G_color_limits = [0 max(max(G_curvature))];
-
 M_curvature = mean_curvature_ellipsoid(Theta_mesh_fine, Phi_mesh_fine, q);
 M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
 
 % visualize IC
-visualize_geodesic_path(X, 0, [pt_1_idx pt_3_idx], [pt_2_idx pt_4_idx], vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-30 30], [-30 30], [-30 30]);
-% visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_range, dist_mat);
-% visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-30 30], [-30 30], [-30 30], G_color_limits, G_curvature);
+% visualize_surface(X, 0, vis_x, vis_y, vis_z, [-30 30], [-30 30], [-30 30]);
+% visualize_geodesic_path(X, 0, [pt_1_idx pt_3_idx], [pt_2_idx pt_4_idx], vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-30 30], [-30 30], [-30 30]);
+visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_range, dist_mat);
+% visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-30 30], [-30 30], [-30 30], G_color_limits, G_curvature, true);
 
 t = 0;
 itr = 0;
@@ -100,7 +100,7 @@ while t < totT
 
         P(i,:) = [0, 0, 0]; 
         for j = 1 : N
-            Fij = Alpha*exp(-1.0*norm((X(i,:)-X(j,:)))/(2*Sigma^2));
+            Fij = Alpha*exp(-1.0*(norm((X(i,:)-X(j,:)))^2)/(2*Sigma^2));
             P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
         end
 
@@ -129,8 +129,10 @@ while t < totT
     t = t + deltaT;
     itr = itr + 1;
     
-    visualize_geodesic_path(X, itr, [pt_1_idx pt_3_idx], [pt_2_idx pt_4_idx], vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-30 30], [-30 30], [-30 30]);
-    % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_range, dist_mat);
+    % visualize_surface(X, itr, vis_x, vis_y, vis_z, [-30 30], [-30 30], [-30 30]);
+    % visualize_geodesic_path(X, itr, [pt_1_idx pt_3_idx], [pt_2_idx pt_4_idx], vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-30 30], [-30 30], [-30 30]);
+    visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-30 30], dist_range, dist_mat);
+    % visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-30 30], [-30 30], [-30 30], G_color_limits, G_curvature, true);
 
 end
 

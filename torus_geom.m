@@ -4,6 +4,8 @@
 % Last Modified: Jul 11, 2020
 % Reference: Using Particles to Sample and Control Implicit Surfaces
 % Andrew P. Witkin and Paul S. Heckbert, Proc. SIGGRAPH '94
+% Generate movie using ffmpeg:
+% ffmpeg -r 10 -i sim_%03d.png -vcodec libx264 -y -an sim_movie.mp4 -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2"
 %
 
 % seed RNG
@@ -60,13 +62,13 @@ else
     mesh_phi_num = 40;
     theta_grid = linspace(0, 2*pi, mesh_theta_num);
     phi_grid = linspace(0, 2*pi, mesh_phi_num);
-    [Phi_mesh, Theta_mesh] = meshgrid(phi_grid, theta_grid); 
-    mesh_x = (R+r.*cos(Theta_mesh)).*cos(Phi_mesh);
-    mesh_y = (R+r.*cos(Theta_mesh)).*sin(Phi_mesh);
-    mesh_z = r.*sin(Theta_mesh);
+    [Phi_mesh_fine, Theta_mesh_fine] = meshgrid(phi_grid, theta_grid); 
+    mesh_x = (R+r.*cos(Theta_mesh_fine)).*cos(Phi_mesh_fine);
+    mesh_y = (R+r.*cos(Theta_mesh_fine)).*sin(Phi_mesh_fine);
+    mesh_z = r.*sin(Theta_mesh_fine);
     mat = adj_mat_torus(mesh_x,mesh_y,mesh_z);
     [dist_mat, next] = FloydWarshall(mat);
-    save torus_mesh.mat mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
+    save torus_mesh.mat Theta_mesh_fine Phi_mesh_fine mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
 end
 dist_range = [0 max(dist_mat(:))];
 
@@ -80,10 +82,17 @@ vis_x = (R+r.*cos(Theta_mesh)).*cos(Phi_mesh);
 vis_y = (R+r.*cos(Theta_mesh)).*sin(Phi_mesh);
 vis_z = r.*sin(Theta_mesh);
 
+% compute mean and gaussian curvature
+G_curvature = gaussian_curvature_torus(Theta_mesh_fine, Phi_mesh_fine, q);
+G_color_limits = [min(min(G_curvature)) max(max(G_curvature))];
+M_curvature = mean_curvature_torus(Theta_mesh_fine, Phi_mesh_fine, q);
+M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
+
 % visualize IC
 % visualize_surface(X, 0, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
-visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
+% visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
+visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
 
 t = 0;
 itr = 0;
@@ -95,7 +104,7 @@ while t < totT
 
         P(i,:) = [0, 0, 0]; 
         for j = 1 : N
-            Fij = Alpha*exp(-1.0*norm((X(i,:)-X(j,:)))/(2*Sigma^2));
+            Fij = Alpha*exp(-1.0*(norm((X(i,:)-X(j,:)))^2)/(2*Sigma^2));
             P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
         end
 
@@ -123,8 +132,11 @@ while t < totT
     t = t + deltaT;
     itr = itr + 1;
     
-    visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
+    % visualize_surface(X, itr, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
+    % visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
     % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
+    visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
+
     
 end
 
@@ -148,5 +160,26 @@ function [adj_mat] = adj_mat_torus(x, y, z)
             end
         end
     end
+    
+end
+
+function [curvature] = gaussian_curvature_torus(Theta_mesh_fine, ~, q)
+
+    % Adapted from: https://mathworld.wolfram.com/Torus.html
+    r = q(1);
+    R = q(2);
+    num = cos(Theta_mesh_fine);
+    denom = r * (R + (r * cos(Theta_mesh_fine)));
+    curvature = num./denom;
+    
+end
+
+function [curvature] = mean_curvature_torus(Theta_mesh_fine, ~ , q)
+    
+    r = q(1);
+    R = q(2);
+    num = R + (2 * r * cos(Theta_mesh_fine));
+    denom = 2 * r * (R + (r * cos(Theta_mesh_fine)));
+    curvature = num./denom;
     
 end
