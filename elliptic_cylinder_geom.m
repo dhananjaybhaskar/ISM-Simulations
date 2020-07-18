@@ -101,15 +101,8 @@ while t < totT
 
         P(i,:) = [0, 0, 0]; 
         for j = 1 : N
-            min_dist = min([dist_conventional dist_reversed_1 dist_reversed_2]);
             Fij = Alpha*exp(-1.0*(norm(X(i,:) - X(j,:))^2)/(2*Sigma^2));
-            if(min_dist == dist_conventional)
-                P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
-            elseif(min_dist == dist_reversed_1)
-                P(i,:) = P(i,:) + (x_reversed_1 - X(j,:))*Fij;
-            else
-                P(i,:) = P(i,:) + (x_reversed_2 - X(j,:))*Fij;
-            end
+            P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
         end
 
         F(i) = (X(i,1)^2/a^2) + (X(i, 2)^2/b^2) - 1;
