@@ -10,15 +10,15 @@
 rng(1337)
 
 % number of particles
-N = 200;
+N = 70; %testing for single cell repolarization
 
 % params
 Alpha = 2;
-Sigma = 0.5;
+Sigma = 0.2;
 phi = 1;
 deltaT = 0.1;
-totT = 5;
-
+totT = 60;
+repolarization_time = 1; % in seconds
 % init positions
 X = zeros(N, 3);
 
@@ -35,6 +35,8 @@ dXdt = zeros(N, 3);
 pt_1_idx = floor(rand()*N) + 1;
 pt_2_idx = floor(rand()*N) + 1;
 
+walk_amplitude = 0.3;
+walk_stdev = pi/4;
 % use rejection sampling for initial position
 % https://math.stackexchange.com/questions/2017079/uniform-random-points-on-a-torus
 cnt = 0;
@@ -86,22 +88,19 @@ M_curvature = mean_curvature_torus(Theta_mesh_fine, Phi_mesh_fine, q);
 M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
 % visualize_curvature_heatmap(X,0,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-10 10], [-10 10], [-10 10], G_color_limits, G_curvature);
 % visualize_curvature_heatmap(X,1,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-10 10], [-10 10], [-10 10], M_color_limits, M_curvature);
-visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-10 10]);
+% visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-10 10]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
-
+visualize_surface(X,0,vis_x,vis_y,vis_z, [-10 10], [-10 10], [-10 10]);
 t = 0;
 itr = 0;
 
+walk_direction = rand(N, 1) * 2 * pi;
 while t < totT
 
     % compute updated state vectors
     for i = 1 : N
 
-        P(i,:) = [0, 0, 0]; 
-        for j = 1 : N
-            Fij = Alpha*exp(-1.0*(norm((X(i,:)-X(j,:)))^2)/(2*Sigma^2));
-            P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
-        end
+        P(i,:) = [0, 0, 0];
 
         F(i) = (X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)^2 - 4*q(2)^2*(X(i,1)^2 + X(i,2)^2);
 
@@ -109,6 +108,32 @@ while t < totT
         dFdX_i_y = 4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*X(i,2) - 8*q(2)^2*X(i,2);
         dFdX_i_z = 4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*X(i,3);
         dFdX(i,:) = [dFdX_i_x, dFdX_i_y, dFdX_i_z];
+        
+        % generate orthonormal basis for tangent plane 
+        nullspace = [dFdX(i,:)' zeros(3,2)];
+        assert(numel(nullspace) == 9);
+        nullspace = null(nullspace);
+        nullspace = nullspace';
+        
+        if(1) %turn back on to enable simple repulsion
+            for j = 1 : N %calculate repulsion force
+                Fij = Alpha*exp(-1.0*(norm((X(i,:)-X(j,:)))^2)/(2*Sigma^2));
+                P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
+            end
+        end
+        
+        
+        if(1) % turn off to disable random motion
+            if(abs(mod((t + deltaT*0.0001), repolarization_time)) < deltaT * 0.01)
+                if(i == 40)
+                    t
+                end
+                temp = rand();
+                walk_direction(i) = walk_direction(i) + norminv(temp,0,walk_stdev);
+            end
+            P(i,:) = P(i,:) + cos(walk_direction(i)) * nullspace(1, :) * walk_amplitude;
+            P(i,:) = P(i,:) + sin(walk_direction(i)) * nullspace(2, :) * walk_amplitude;
+        end
 
         dFdq_i_a = -4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*q(1);
         dFdq_i_R = 4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*q(2) - 8*q(2)*(X(i,1)^2 + X(i,2)^2); 
@@ -126,8 +151,8 @@ while t < totT
     
     t = t + deltaT;
     itr = itr + 1;
-    
-    visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-10 10]);
+    visualize_surface(X,itr,vis_x,vis_y,vis_z, [-10 10], [-10 10], [-10 10]);
+%     visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-10 10]);
     % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
     
 end
