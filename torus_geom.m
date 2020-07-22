@@ -7,8 +7,7 @@
 %
 
 % seed RNG
-rng(1337)
-
+rng(1337);
 % number of particles
 N = 70; %testing for single cell repolarization
 
@@ -17,10 +16,12 @@ Alpha = 2;
 Sigma = 0.2;
 phi = 1;
 deltaT = 0.1;
-totT = 60;
-repolarization_time = 1; % in seconds
+totT = 10;
+num_repolarization_steps = 10;
+num_trailing_positions = 100;
 % init positions
 X = zeros(N, 3);
+initial_repolarization_times = floor(rand(N, 1) * 10);
 
 % preallocate state variables
 P = zeros(N, 3);
@@ -90,7 +91,17 @@ M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
 % visualize_curvature_heatmap(X,1,vis_x,vis_y,vis_z,mesh_x,mesh_y,mesh_z, [-10 10], [-10 10], [-10 10], M_color_limits, M_curvature);
 % visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-10 10]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
-visualize_surface(X,0,vis_x,vis_y,vis_z, [-10 10], [-10 10], [-10 10]);
+prev_paths = nan * ones(N,20,3);
+path_colors = hsv(N);
+
+%randomize color layout
+for i = 1:N
+    j = floor(rand() * N) + 1;
+    temp = path_colors(j, :);
+    path_colors(j, :) = path_colors(i, :);
+    path_colors(i, :) = temp;
+end
+visualize_particle_path(X,0, prev_paths, path_colors, vis_x,vis_y,vis_z, [-10 10], [-10 10], [-10 10]);
 t = 0;
 itr = 0;
 
@@ -124,10 +135,7 @@ while t < totT
         
         
         if(1) % turn off to disable random motion
-            if(abs(mod((t + deltaT*0.0001), repolarization_time)) < deltaT * 0.01)
-                if(i == 40)
-                    t
-                end
+            if(mod(itr, num_repolarization_steps) == initial_repolarization_times(i))
                 temp = rand();
                 walk_direction(i) = walk_direction(i) + norminv(temp,0,walk_stdev);
             end
@@ -142,6 +150,13 @@ while t < totT
         correction = (dot(dFdX(i,:), P(i,:)) + dot(dFdq(i,:), Q) + phi*F(i))/(norm(dFdX(i,:))^2);
         dXdt(i,:) = P(i,:) - correction*dFdX(i,:);
 
+        if(itr < num_trailing_positions)
+            prev_paths(i, itr + 1, :) = X(i, :);
+        else
+            prev_paths(i, 1:(num_trailing_positions - 1), :) = prev_paths(i, 2:num_trailing_positions, :);
+            prev_paths(i, num_trailing_positions, :) = X(i, :);
+        end
+
     end
     
     % update position
@@ -151,7 +166,8 @@ while t < totT
     
     t = t + deltaT;
     itr = itr + 1;
-    visualize_surface(X,itr,vis_x,vis_y,vis_z, [-10 10], [-10 10], [-10 10]);
+    
+    visualize_particle_path(X,itr, prev_paths, path_colors, vis_x,vis_y,vis_z, [-10 10], [-10 10], [-10 10]);
 %     visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-10 10]);
     % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
     
