@@ -3,7 +3,7 @@ function [] = visualize_geodesic_path(X, itr, pt_1_idxs, pt_2_idxs, vis_x, vis_y
 
     num_points = numel(pt_1_idxs);
     assert(num_points == numel(pt_2_idxs), "Array size does not match.");
-    assert(num_points >= 1, "Please specific atleast 1 set of points.");
+    assert(num_points >= 1, "Please specify atleast one pair of points.");
         
     fig = figure('visible', 'off');
     mesh(vis_x, vis_y, vis_z, 'edgecolor', 'k');

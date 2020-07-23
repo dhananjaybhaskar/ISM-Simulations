@@ -19,10 +19,22 @@ Alpha = 2;
 Sigma = 0.5;
 phi = 1;
 deltaT = 0.1;
-totT = 5;
+totT = 10;
+num_repolarization_steps = 10;
+num_trailing_positions = 40;
+
+% toggle interaction forces
+FORCE_EUCLIDEAN_REPULSION_ON = false;
+FORCE_RANDOM_POLARITY_ON = true;
 
 % init positions
 X = zeros(N, 3);
+
+% random polarization params
+walk_amplitude = 0.3;
+walk_stdev = pi/4;
+walk_direction = rand(N, 1) * 2 * pi;
+init_repolarization_offset = floor(rand(N, 1) * num_repolarization_steps);
 
 % preallocate state variables
 P = zeros(N, 3);
@@ -32,6 +44,18 @@ F = zeros(N, 1);
 dFdX = zeros(N, 3);
 dFdq = zeros(N, 2);
 dXdt = zeros(N, 3);
+
+% preallocate particle trajectories
+prev_paths = nan * ones(N, num_trailing_positions, 3);
+path_colors = hsv(N);
+
+% pick trajectory colors
+for i = 1:N
+    j = floor(rand() * N) + 1;
+    temp = path_colors(j, :);
+    path_colors(j, :) = path_colors(i, :);
+    path_colors(i, :) = temp;
+end
 
 % pick random particles
 pt_1_idx = floor(rand()*N) + 1;
@@ -92,7 +116,8 @@ M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
 % visualize_surface(X, 0, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
 % visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
-visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
+% visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
+visualize_trajectories(X, 0, prev_paths, path_colors, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
 
 t = 0;
 itr = 0;
@@ -102,11 +127,7 @@ while t < totT
     % compute updated state vectors
     for i = 1 : N
 
-        P(i,:) = [0, 0, 0]; 
-        for j = 1 : N
-            Fij = Alpha*exp(-1.0*(norm((X(i,:)-X(j,:)))^2)/(2*Sigma^2));
-            P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
-        end
+        P(i,:) = [0, 0, 0];
 
         F(i) = (X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)^2 - 4*q(2)^2*(X(i,1)^2 + X(i,2)^2);
 
@@ -114,6 +135,26 @@ while t < totT
         dFdX_i_y = 4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*X(i,2) - 8*q(2)^2*X(i,2);
         dFdX_i_z = 4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*X(i,3);
         dFdX(i,:) = [dFdX_i_x, dFdX_i_y, dFdX_i_z];
+        
+        if (FORCE_EUCLIDEAN_REPULSION_ON)
+            for j = 1 : N
+                Fij = Alpha*exp(-1.0*(norm((X(i,:)-X(j,:)))^2)/(2*Sigma^2));
+                P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
+            end
+        end
+        
+        if (FORCE_RANDOM_POLARITY_ON)
+            nullspace = [dFdX(i,:)' zeros(3,2)];
+            assert(numel(nullspace) == 9, "Nullspace computation error.");
+            nullspace = null(nullspace);
+            nullspace = nullspace';
+            if(mod(itr, num_repolarization_steps) == init_repolarization_offset(i))
+                temp = rand();
+                walk_direction(i) = walk_direction(i) + norminv(temp, 0, walk_stdev);
+            end
+            P(i,:) = P(i,:) + cos(walk_direction(i)) * nullspace(1, :) * walk_amplitude;
+            P(i,:) = P(i,:) + sin(walk_direction(i)) * nullspace(2, :) * walk_amplitude;
+        end
 
         dFdq_i_a = -4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*q(1);
         dFdq_i_R = 4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*q(2) - 8*q(2)*(X(i,1)^2 + X(i,2)^2); 
@@ -121,6 +162,13 @@ while t < totT
 
         correction = (dot(dFdX(i,:), P(i,:)) + dot(dFdq(i,:), Q) + phi*F(i))/(norm(dFdX(i,:))^2);
         dXdt(i,:) = P(i,:) - correction*dFdX(i,:);
+        
+        if(itr < num_trailing_positions)
+            prev_paths(i, itr + 1, :) = X(i, :);
+        else
+            prev_paths(i, 1:(num_trailing_positions - 1), :) = prev_paths(i, 2:num_trailing_positions, :);
+            prev_paths(i, num_trailing_positions, :) = X(i, :);
+        end
 
     end
     
@@ -135,9 +183,9 @@ while t < totT
     % visualize_surface(X, itr, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
     % visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
     % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
-    visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
+    % visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
+    visualize_trajectories(X, itr, prev_paths, path_colors, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
 
-    
 end
 
 
