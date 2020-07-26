@@ -19,7 +19,8 @@ function visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y
     zoom(1.2)
     hold off;
     set(gca, 'visible', 'off')
-    fname = strcat('sim_', sprintf('%03d',itr), '.png');
+    fname = strcat('sim_', sprintf('%03d', itr), '.png');
     saveas(fig, fname, 'png');
+    close
     
 end

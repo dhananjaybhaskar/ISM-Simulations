@@ -51,7 +51,8 @@ function [] = visualize_geodesic_path(X, itr, pt_1_idxs, pt_2_idxs, vis_x, vis_y
     end
     
     hold off;
-    fname = strcat('sim_', sprintf('%03d',itr), '.png');
+    fname = strcat('sim_', sprintf('%03d', itr), '.png');
     saveas(fig, fname, 'png');
+    close
     
 end
