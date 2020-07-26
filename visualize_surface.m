@@ -12,5 +12,6 @@ function [] = visualize_surface(X, itr, vis_x, vis_y, vis_z, x_limits, y_limits,
     set(gca, 'visible', 'off')
     fname = strcat('sim_', sprintf('%03d',itr), '.png');
     saveas(fig, fname, 'png');
+    close
     
 end

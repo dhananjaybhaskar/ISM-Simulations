@@ -28,7 +28,8 @@ function visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y,
     caxis(color_limits)
     zoom(1.2)
     hold off;
-    fname = strcat('sim_', sprintf('%03d',itr), '.png');
+    fname = strcat('sim_', sprintf('%03d', itr), '.png');
     saveas(fig, fname, 'png');
+    close
     
 end
