@@ -125,7 +125,7 @@ M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
 % visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
 % visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
-visualize_trajectories(X, 0, prev_paths, path_colors, vis_x, vis_y, vis_z, [-4 4], [-4 4], [-3 3]);
+visualize_trajectories(X, 0, prev_paths, path_colors, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
 
 t = 0;
 itr = 0;
@@ -164,23 +164,13 @@ while t < totT
         
         if (FORCE_CUCKER_SMALE_POLARITY_ON)
             dPdt = [0 0 0];
-            if(itr == 0)
-                nullspace = [dFdX(i,:); zeros(2,3)];
-                assert(numel(nullspace) == 9, "Nullspace computation error.");
-                nullspace = null(nullspace);
-                nullspace = nullspace';
-                P(i,:) = cos(walk_direction(i)) * nullspace(1, :) * walk_amplitude;
-                P(i,:) = P(i, :) + sin(walk_direction(i)) * nullspace(2, :) * walk_amplitude;
-                prev_p(i, :) = P(i, :);
-            else
-                % compute the Cucker-Smale polarity
-                [particle_indices] = find_neighbors(X, mesh_x, mesh_y, mesh_z, dist_mat, i, CS_threshold);
-                sz = numel(particle_indices);
-                for j = 1:sz
-                    dist = norm(X(i, :) - X(j, :));
-                    CS_H = CS_K/((CS_Sigma^2) + (dist^2))^CS_Gamma;
-                    dPdt = dPdt + (1/sz) .* CS_H .* (prev_p(j, :) - prev_p(i, :));
-                end
+            % compute the Cucker-Smale polarity
+            [particle_indices] = find_neighbors(X, mesh_x, mesh_y, mesh_z, dist_mat, i, CS_threshold);
+            sz = numel(particle_indices);
+            for j = 1:sz
+                dist = norm(X(i, :) - X(j, :));
+                CS_H = CS_K/((CS_Sigma^2) + (dist^2))^CS_Gamma;
+                dPdt = dPdt + (1/sz) .* CS_H .* (prev_p(j, :) - prev_p(i, :));
             end
             P(i, :) = P(i, :) + prev_p(i, :) + (deltaT * dPdt);
         end
@@ -199,13 +189,15 @@ while t < totT
             prev_paths(i, num_trailing_positions, :) = X(i, :);
         end
     
-    % update position
-    for i = 1 : N
-        X(i,:) = X(i,:) + deltaT*dXdt(i,:);
-    end
+
     
     prev_p(i, :) = P(i, :);
     P(i,:) = [0, 0, 0];
+    end
+    
+    % update position
+    for i = 1 : N
+        X(i,:) = X(i,:) + deltaT*dXdt(i,:);
     end
 
     t = t + deltaT;
@@ -215,7 +207,7 @@ while t < totT
     % visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
     % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
     % visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
-    visualize_trajectories(X, itr, prev_paths, path_colors, vis_x, vis_y, vis_z, [-4 4], [-4 4], [-3 3]);
+    visualize_trajectories(X, itr, prev_paths, path_colors, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
 
 end
 
