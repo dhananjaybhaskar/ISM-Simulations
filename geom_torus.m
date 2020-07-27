@@ -12,32 +12,40 @@
 rng(42)
 
 % number of particles
-N = 200;
+N = 50;
 
 % params
 Alpha = 2;
 Sigma = 0.5;
 phi = 1;
 deltaT = 0.1;
-totT = 10;
+totT = 2;
 num_repolarization_steps = 10;
 num_trailing_positions = 40;
 
 % toggle interaction forces
 FORCE_EUCLIDEAN_REPULSION_ON = false;
-FORCE_RANDOM_POLARITY_ON = true;
+FORCE_RANDOM_POLARITY_ON = false;
+FORCE_CUCKER_SMALE_POLARITY_ON = true;
 
 % init positions
 X = zeros(N, 3);
 
 % random polarization params
-walk_amplitude = 0.3;
+walk_amplitude = 0.08;
 walk_stdev = pi/4;
 walk_direction = rand(N, 1) * 2 * pi;
 init_repolarization_offset = floor(rand(N, 1) * num_repolarization_steps);
 
+% Cucker-Smale polarization params
+CS_K = 1/3;
+CS_Sigma = 1;
+CS_Gamma = 2;
+CS_threshold = 5;
+
 % preallocate state variables
 P = zeros(N, 3);
+prev_p = zeros(N, 3);
 q = [2, 5];
 Q = [0.0, 0.0];
 F = zeros(N, 1);
@@ -117,7 +125,7 @@ M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
 % visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
 % visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
-visualize_trajectories(X, 0, prev_paths, path_colors, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
+visualize_trajectories(X, 0, prev_paths, path_colors, vis_x, vis_y, vis_z, [-4 4], [-4 4], [-3 3]);
 
 t = 0;
 itr = 0;
@@ -126,9 +134,7 @@ while t < totT
 
     % compute updated state vectors
     for i = 1 : N
-
-        P(i,:) = [0, 0, 0];
-
+        
         F(i) = (X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)^2 - 4*q(2)^2*(X(i,1)^2 + X(i,2)^2);
 
         dFdX_i_x = 4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*X(i,1) - 8*q(2)^2*X(i,1);
@@ -144,7 +150,7 @@ while t < totT
         end
         
         if (FORCE_RANDOM_POLARITY_ON)
-            nullspace = [dFdX(i,:)' zeros(3,2)];
+            nullspace = [dFdX(i,:); zeros(2,3)];
             assert(numel(nullspace) == 9, "Nullspace computation error.");
             nullspace = null(nullspace);
             nullspace = nullspace';
@@ -155,6 +161,30 @@ while t < totT
             P(i,:) = P(i,:) + cos(walk_direction(i)) * nullspace(1, :) * walk_amplitude;
             P(i,:) = P(i,:) + sin(walk_direction(i)) * nullspace(2, :) * walk_amplitude;
         end
+        
+        if (FORCE_CUCKER_SMALE_POLARITY_ON)
+            dPdt = [0 0 0];
+            if(itr == 0)
+                nullspace = [dFdX(i,:); zeros(2,3)];
+                assert(numel(nullspace) == 9, "Nullspace computation error.");
+                nullspace = null(nullspace);
+                nullspace = nullspace';
+                P(i,:) = cos(walk_direction(i)) * nullspace(1, :) * walk_amplitude;
+                P(i,:) = P(i, :) + sin(walk_direction(i)) * nullspace(2, :) * walk_amplitude;
+                prev_p(i, :) = P(i, :);
+            else
+                % compute the Cucker-Smale polarity
+                [particle_indices] = find_neighbors(X, mesh_x, mesh_y, mesh_z, dist_mat, i, CS_threshold);
+                sz = numel(particle_indices);
+                for j = 1:sz
+                    dist = norm(X(i, :) - X(j, :));
+                    CS_H = CS_K/((CS_Sigma^2) + (dist^2))^CS_Gamma;
+                    dPdt = dPdt + (1/sz) .* CS_H .* (prev_p(j, :) - prev_p(i, :));
+                end
+            end
+            P(i, :) = P(i, :) + prev_p(i, :) + (deltaT * dPdt);
+        end
+                
 
         dFdq_i_a = -4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*q(1);
         dFdq_i_R = 4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*q(2) - 8*q(2)*(X(i,1)^2 + X(i,2)^2); 
@@ -162,21 +192,22 @@ while t < totT
 
         correction = (dot(dFdX(i,:), P(i,:)) + dot(dFdq(i,:), Q) + phi*F(i))/(norm(dFdX(i,:))^2);
         dXdt(i,:) = P(i,:) - correction*dFdX(i,:);
-        
         if(itr < num_trailing_positions)
             prev_paths(i, itr + 1, :) = X(i, :);
         else
             prev_paths(i, 1:(num_trailing_positions - 1), :) = prev_paths(i, 2:num_trailing_positions, :);
             prev_paths(i, num_trailing_positions, :) = X(i, :);
         end
-
-    end
     
     % update position
     for i = 1 : N
         X(i,:) = X(i,:) + deltaT*dXdt(i,:);
     end
     
+    prev_p(i, :) = P(i, :);
+    P(i,:) = [0, 0, 0];
+    end
+
     t = t + deltaT;
     itr = itr + 1;
     
@@ -184,7 +215,7 @@ while t < totT
     % visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
     % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
     % visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
-    visualize_trajectories(X, itr, prev_paths, path_colors, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
+    visualize_trajectories(X, itr, prev_paths, path_colors, vis_x, vis_y, vis_z, [-4 4], [-4 4], [-3 3]);
 
 end
 
