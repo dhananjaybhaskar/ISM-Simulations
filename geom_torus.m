@@ -19,7 +19,7 @@ Alpha = 2;
 Sigma = 0.5;
 phi = 1;
 deltaT = 0.1;
-totT = 2;
+totT = 10;
 num_repolarization_steps = 10;
 num_trailing_positions = 40;
 
@@ -45,7 +45,12 @@ CS_threshold = 5;
 
 % preallocate state variables
 P = zeros(N, 3);
-prev_p = zeros(N, 3);
+prev_EF_buffer = zeros(N, 3);
+prev_RP_buffer = zeros(N, 3);
+prev_CS_buffer = zeros(N, 3);
+prev_EF = zeros(N, 3);
+prev_RP = zeros(N, 3);
+prev_CS = zeros(N, 3);
 q = [2, 5];
 Q = [0.0, 0.0];
 F = zeros(N, 1);
@@ -145,7 +150,9 @@ while t < totT
         if (FORCE_EUCLIDEAN_REPULSION_ON)
             for j = 1 : N
                 Fij = Alpha*exp(-1.0*(norm((X(i,:)-X(j,:)))^2)/(2*Sigma^2));
-                P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
+                deltaP = (X(i,:) - X(j,:))*Fij;
+                prev_EF_buffer = deltaP;
+                P(i, :) = P(i, :) + deltaP;
             end
         end
         
@@ -158,8 +165,10 @@ while t < totT
                 temp = rand();
                 walk_direction(i) = walk_direction(i) + norminv(temp, 0, walk_stdev);
             end
-            P(i,:) = P(i,:) + cos(walk_direction(i)) * nullspace(1, :) * walk_amplitude;
-            P(i,:) = P(i,:) + sin(walk_direction(i)) * nullspace(2, :) * walk_amplitude;
+            deltaP =  cos(walk_direction(i)) * nullspace(1, :) * walk_amplitude;
+            deltaP = deltaP + sin(walk_direction(i)) * nullspace(2, :) * walk_amplitude;
+            prev_RP_buffer(i, :) = deltaP;
+            P(i, :) = P(i, :) + deltaP;
         end
         
         if (FORCE_CUCKER_SMALE_POLARITY_ON)
@@ -167,12 +176,16 @@ while t < totT
             % compute the Cucker-Smale polarity
             [particle_indices] = find_neighbors(X, mesh_x, mesh_y, mesh_z, dist_mat, i, CS_threshold);
             sz = numel(particle_indices);
+            prev_p_i = prev_EF(i, :) + prev_RP(i, :) + prev_CS(i, :);
             for j = 1:sz
                 dist = norm(X(i, :) - X(j, :));
                 CS_H = CS_K/((CS_Sigma^2) + (dist^2))^CS_Gamma;
-                dPdt = dPdt + (1/sz) .* CS_H .* (prev_p(j, :) - prev_p(i, :));
+                prev_p_j = prev_EF(j, :) + prev_RP(j, :) + prev_CS(j, :);
+                dPdt = dPdt + (1/sz) .* CS_H .* (prev_p_j - prev_p_i);
             end
-            P(i, :) = P(i, :) + prev_p(i, :) + (deltaT * dPdt);
+            deltaP = deltaT * dPdt;
+            prev_cs(i, :) = deltaP;
+            P(i, :) = P(i, :) + deltaP;
         end
                 
 
@@ -188,17 +201,16 @@ while t < totT
             prev_paths(i, 1:(num_trailing_positions - 1), :) = prev_paths(i, 2:num_trailing_positions, :);
             prev_paths(i, num_trailing_positions, :) = X(i, :);
         end
-    
-
-    
-    prev_p(i, :) = P(i, :);
-    P(i,:) = [0, 0, 0];
     end
     
-    % update position
+    % update position and forces
     for i = 1 : N
         X(i,:) = X(i,:) + deltaT*dXdt(i,:);
     end
+    P = zeros(N, 3);
+    prev_EF = prev_EF_buffer;
+    prev_RP = prev_RP_buffer;
+    prev_CS = prev_CS_buffer;
 
     t = t + deltaT;
     itr = itr + 1;
