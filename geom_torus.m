@@ -14,34 +14,34 @@ rng(42)
 % number of particles
 N = 50;
 
-% params
-Alpha = 2;
-Sigma = 0.5;
-phi = 1;
+% general params
 deltaT = 0.1;
 totT = 10;
-num_repolarization_steps = 10;
-num_trailing_positions = 40;
+
 
 % toggle interaction forces
 FORCE_EUCLIDEAN_REPULSION_ON = false;
-FORCE_RANDOM_POLARITY_ON = false;
+FORCE_RANDOM_POLARITY_ON = true;
 FORCE_CUCKER_SMALE_POLARITY_ON = true;
 
 % init positions
 X = zeros(N, 3);
 
+% Euclidean repulsion force params 
 % random polarization params
-walk_amplitude = 0.08;
+walk_amplitude = 0.5;
 walk_stdev = pi/4;
 walk_direction = rand(N, 1) * 2 * pi;
 init_repolarization_offset = floor(rand(N, 1) * num_repolarization_steps);
+num_repolarization_steps = 10;
+num_trailing_positions = 40;
 
-% Cucker-Smale polarization params
-CS_K = 1/3;
+% Cucker-Smale polarization/flocking params
+CS_K = 2;
 CS_Sigma = 1;
 CS_Gamma = 2;
 CS_threshold = 5;
+use_nearest_neighbors = false;
 
 % preallocate state variables
 P = zeros(N, 3);
@@ -174,17 +174,22 @@ while t < totT
         if (FORCE_CUCKER_SMALE_POLARITY_ON)
             dPdt = [0 0 0];
             % compute the Cucker-Smale polarity
-            [particle_indices] = find_neighbors(X, mesh_x, mesh_y, mesh_z, dist_mat, i, CS_threshold);
+            if(use_nearest_neighbors)
+                particle_indices = find_neighbors(X, mesh_x, mesh_y, mesh_z, dist_mat, i, CS_threshold);
+            else
+                particle_indices = 1:N;
+            end
             sz = numel(particle_indices);
             prev_p_i = prev_EF(i, :) + prev_RP(i, :) + prev_CS(i, :);
             for j = 1:sz
-                dist = norm(X(i, :) - X(j, :));
+                idx = particle_indices(j);
+                dist = norm(X(i, :) - X(idx, :));
                 CS_H = CS_K/((CS_Sigma^2) + (dist^2))^CS_Gamma;
-                prev_p_j = prev_EF(j, :) + prev_RP(j, :) + prev_CS(j, :);
+                prev_p_j = prev_EF(idx, :) + prev_RP(idx, :) + prev_CS(idx, :);
                 dPdt = dPdt + (1/sz) .* CS_H .* (prev_p_j - prev_p_i);
             end
             deltaP = deltaT * dPdt;
-            prev_cs(i, :) = deltaP;
+            prev_CS(i, :) = deltaP;
             P(i, :) = P(i, :) + deltaP;
         end
                 
