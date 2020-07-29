@@ -8,15 +8,17 @@
 % ffmpeg -r 10 -i sim_%03d.png -vcodec libx264 -y -an sim_movie.mp4 -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2"
 %
 
+% clear memory
+close all; clear all;
 % seed RNG
-rng(42)
+rng(4987)
 
 % number of particles
 N = 50;
 
 % general params
 deltaT = 0.1;
-totT = 10;
+totT = 60;
 
 
 % toggle interaction forces
@@ -28,6 +30,10 @@ FORCE_CUCKER_SMALE_POLARITY_ON = true;
 X = zeros(N, 3);
 
 % Euclidean repulsion force params 
+Alpha = 2;
+Sigma = 0.5;
+phi = 1;
+
 % random polarization params
 walk_amplitude = 0.5;
 walk_stdev = pi/4;
@@ -39,7 +45,7 @@ num_trailing_positions = 40;
 % Cucker-Smale polarization/flocking params
 CS_K = 2;
 CS_Sigma = 1;
-CS_Gamma = 2;
+CS_Gamma = 1.5;
 CS_threshold = 5;
 use_nearest_neighbors = false;
 
@@ -151,7 +157,7 @@ while t < totT
             for j = 1 : N
                 Fij = Alpha*exp(-1.0*(norm((X(i,:)-X(j,:)))^2)/(2*Sigma^2));
                 deltaP = (X(i,:) - X(j,:))*Fij;
-                prev_EF_buffer = deltaP;
+                prev_EF_buffer(i, :) = deltaP;
                 P(i, :) = P(i, :) + deltaP;
             end
         end
