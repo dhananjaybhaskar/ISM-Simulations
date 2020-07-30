@@ -111,7 +111,8 @@ else
     mesh_z = r.*sin(Theta_mesh_fine);
     mat = adj_mat_torus(mesh_x,mesh_y,mesh_z);
     [dist_mat, next] = FloydWarshall(mat);
-    save torus_mesh.mat Theta_mesh_fine Phi_mesh_fine mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
+    octree = initialize_octree(mesh_x, mesh_y, mesh_z, 10);
+    save torus_mesh.mat octree Theta_mesh_fine Phi_mesh_fine mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
 end
 dist_range = [0 max(dist_mat(:))];
 
@@ -142,10 +143,11 @@ t = 0;
 itr = 0;
 
 while t < totT
-
+    % initialize nearest neighbors array
+    [indexes, dists] = all_mesh_neighbors(X, mesh_x, mesh_y, mesh_z);
+    
     % compute updated state vectors
     for i = 1 : N
-        
         F(i) = (X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)^2 - 4*q(2)^2*(X(i,1)^2 + X(i,2)^2);
 
         dFdX_i_x = 4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*X(i,1) - 8*q(2)^2*X(i,1);
@@ -181,7 +183,7 @@ while t < totT
             dPdt = [0 0 0];
             % compute the Cucker-Smale polarity
             if(use_nearest_neighbors)
-                particle_indices = find_neighbors(X, mesh_x, mesh_y, mesh_z, dist_mat, i, CS_threshold);
+                particle_indices = find_neighbors(X, idxes, dists, dist_mat, i, CS_threshold);
             else
                 particle_indices = 1:N;
             end
