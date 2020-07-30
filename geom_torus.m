@@ -38,8 +38,8 @@ phi = 1;
 walk_amplitude = 0.5;
 walk_stdev = pi/4;
 walk_direction = rand(N, 1) * 2 * pi;
-init_repolarization_offset = floor(rand(N, 1) * num_repolarization_steps);
 num_repolarization_steps = 10;
+init_repolarization_offset = floor(rand(N, 1) * num_repolarization_steps);
 num_trailing_positions = 40;
 
 % Cucker-Smale polarization/flocking params
@@ -47,8 +47,7 @@ CS_K = 2;
 CS_Sigma = 1;
 CS_Gamma = 1.5;
 CS_threshold = 5;
-use_nearest_neighbors = false;
-
+use_nearest_neighbors = true;
 % preallocate state variables
 P = zeros(N, 3);
 prev_EF_buffer = zeros(N, 3);
@@ -111,8 +110,7 @@ else
     mesh_z = r.*sin(Theta_mesh_fine);
     mat = adj_mat_torus(mesh_x,mesh_y,mesh_z);
     [dist_mat, next] = FloydWarshall(mat);
-    octree = initialize_octree(mesh_x, mesh_y, mesh_z, 10);
-    save torus_mesh.mat octree Theta_mesh_fine Phi_mesh_fine mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
+    save torus_mesh.mat Theta_mesh_fine Phi_mesh_fine mesh_theta_num mesh_phi_num mesh_x mesh_y mesh_z mat dist_mat next;
 end
 dist_range = [0 max(dist_mat(:))];
 
@@ -183,11 +181,11 @@ while t < totT
             dPdt = [0 0 0];
             % compute the Cucker-Smale polarity
             if(use_nearest_neighbors)
-                particle_indices = find_neighbors(X, idxes, dists, dist_mat, i, CS_threshold);
+                particle_indices = find_neighbors(X, indexes, dists, dist_mat, i, CS_threshold);
             else
                 particle_indices = 1:N;
             end
-            sz = numel(particle_indices);
+            sz = numel(particle_indices)
             prev_p_i = prev_EF(i, :) + prev_RP(i, :) + prev_CS(i, :);
             for j = 1:sz
                 idx = particle_indices(j);
