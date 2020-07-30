@@ -1,7 +1,7 @@
 %
 % Agent-based model of particle movement on implicit surface (torus)
 % Authors: Dhananjay Bhaskar, Tej Stead
-% Last Modified: Jul 11, 2020
+% Last Modified: Jul 30, 2020
 % Reference: Using Particles to Sample and Control Implicit Surfaces
 % Andrew P. Witkin and Paul S. Heckbert, Proc. SIGGRAPH '94
 % Generate movie using ffmpeg:
@@ -23,6 +23,7 @@ totT = 60;
 
 % toggle interaction forces
 FORCE_EUCLIDEAN_REPULSION_ON = false;
+FORCE_ATTR_REPULSION_ON = true;
 FORCE_RANDOM_POLARITY_ON = true;
 FORCE_CUCKER_SMALE_POLARITY_ON = true;
 
@@ -34,6 +35,11 @@ Alpha = 2;
 Sigma = 0.5;
 phi = 1;
 
+% Attraction-repulsion force params
+C_a = 1;
+C_r = 1;
+l_a = 6;
+l_r = 0.5;
 % random polarization params
 walk_amplitude = 0.5;
 walk_stdev = pi/4;
@@ -51,11 +57,15 @@ use_nearest_neighbors = true;
 % preallocate state variables
 P = zeros(N, 3);
 prev_EF_buffer = zeros(N, 3);
+prev_AR_buffer = zeros(N, 3);
 prev_RP_buffer = zeros(N, 3);
 prev_CS_buffer = zeros(N, 3);
 prev_EF = zeros(N, 3);
+prev_AR = zeros(N, 3);
 prev_RP = zeros(N, 3);
 prev_CS = zeros(N, 3);
+
+
 q = [2, 5];
 Q = [0.0, 0.0];
 F = zeros(N, 1);
@@ -154,7 +164,7 @@ while t < totT
         dFdX(i,:) = [dFdX_i_x, dFdX_i_y, dFdX_i_z];
         
         if (FORCE_EUCLIDEAN_REPULSION_ON)
-            for j = 1 : N
+            for j = setdiff(1:N, i)
                 Fij = Alpha*exp(-1.0*(norm((X(i,:)-X(j,:)))^2)/(2*Sigma^2));
                 deltaP = (X(i,:) - X(j,:))*Fij;
                 prev_EF_buffer(i, :) = deltaP;
@@ -162,6 +172,27 @@ while t < totT
             end
         end
         
+        if (FORCE_ATTR_REPULSION_ON) 
+            % since this has a long-range attraction force, we don't only
+            % want to use nearest neighbors
+            dPdt = 0;
+            if(N > 1)
+                for j = setdiff(1:N, i) % skips element i 
+                    diff = X(i, :) - X(j, :);
+                    dist = norm(diff);
+                    grad_x = ((C_a * diff(1) * exp(-1 * (dist/l_a)))/(l_a * dist)) ...
+                        - ((C_r * diff(1) * exp(-1 * (dist/l_r)))/(l_r * dist));
+                    grad_y = ((C_a * diff(2) * exp(-1 * (dist/l_a)))/(l_a * dist)) ...
+                        - ((C_r * diff(2) * exp(-1 * (dist/l_r)))/(l_r * dist));
+                    grad_z = ((C_a * diff(3) * exp(-1 * (dist/l_a)))/(l_a * dist)) ...
+                        - ((C_r * diff(3) * exp(-1 * (dist/l_r)))/(l_r * dist));
+                    dPdt = dPdt - (1/(N - 1)) * [grad_x grad_y grad_z];
+                end
+            end
+            deltaP = deltaT * dPdt;
+            prev_AR_buffer(i, :) = deltaP;
+            P(i, :) = P(i, :) + deltaP;
+        end
         if (FORCE_RANDOM_POLARITY_ON)
             nullspace = [dFdX(i,:); zeros(2,3)];
             assert(numel(nullspace) == 9, "Nullspace computation error.");
@@ -183,15 +214,15 @@ while t < totT
             if(use_nearest_neighbors)
                 particle_indices = find_neighbors(X, indexes, dists, dist_mat, i, CS_threshold);
             else
-                particle_indices = 1:N;
+                particle_indices = setdiff(1:N, i);
             end
-            sz = numel(particle_indices)
+            sz = numel(particle_indices);
             prev_p_i = prev_EF(i, :) + prev_RP(i, :) + prev_CS(i, :);
             for j = 1:sz
                 idx = particle_indices(j);
                 dist = norm(X(i, :) - X(idx, :));
                 CS_H = CS_K/((CS_Sigma^2) + (dist^2))^CS_Gamma;
-                prev_p_j = prev_EF(idx, :) + prev_RP(idx, :) + prev_CS(idx, :);
+                prev_p_j = prev_EF(idx, :) + prev_AR(idx, :) + prev_RP(idx, :) + prev_CS(idx, :);
                 dPdt = dPdt + (1/sz) .* CS_H .* (prev_p_j - prev_p_i);
             end
             deltaP = deltaT * dPdt;
@@ -220,9 +251,9 @@ while t < totT
     end
     P = zeros(N, 3);
     prev_EF = prev_EF_buffer;
+    prev_AR = prev_AR_buffer;
     prev_RP = prev_RP_buffer;
     prev_CS = prev_CS_buffer;
-
     t = t + deltaT;
     itr = itr + 1;
     
