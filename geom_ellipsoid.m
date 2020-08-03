@@ -10,11 +10,11 @@ close all; clear all;
 rng(4987)
 
 % number of particles
-N = 50;
+N = 80;
 
 % general params
 deltaT = 0.1;
-totT = 60;
+totT = 10;
 
 
 % toggle interaction forces
@@ -32,12 +32,12 @@ Sigma = 0.5;
 phi = 1;
 
 % Attraction-repulsion force params
-C_a = 1;
-C_r = 1;
+C_a = 2;
+C_r = 3;
 l_a = 6;
 l_r = 0.5;
 % random polarization params
-walk_amplitude = 0.3;
+walk_amplitude = 0.5;
 walk_stdev = pi/4;
 walk_direction = rand(N, 1) * 2 * pi;
 num_repolarization_steps = 10;
@@ -221,7 +221,7 @@ while t < totT
                 dPdt = dPdt + (1/sz) .* CS_H .* (prev_p_j - prev_p_i);
             end
             deltaP = deltaT * dPdt;
-            prev_CS(i, :) = deltaP;
+            prev_CS_buffer(i, :) = deltaP;
             P(i, :) = P(i, :) + deltaP;
         end
 

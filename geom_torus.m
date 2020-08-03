@@ -14,18 +14,19 @@ close all; clear all;
 rng(4987)
 
 % number of particles
-N = 50;
+N = 80;
 
 % general params
 deltaT = 0.1;
-totT = 60;
+totT = 30;
 
 
 % toggle interaction forces
 FORCE_EUCLIDEAN_REPULSION_ON = false;
 FORCE_ATTR_REPULSION_ON = true;
-FORCE_RANDOM_POLARITY_ON = true;
-FORCE_CUCKER_SMALE_POLARITY_ON = true;
+FORCE_RANDOM_POLARITY_ON = false;
+FORCE_CUCKER_SMALE_POLARITY_ON = false;
+FORCE_CURVATURE_ALIGNMENT_ON = true;
 
 % init positions
 X = zeros(N, 3);
@@ -37,9 +38,9 @@ phi = 1;
 
 % Attraction-repulsion force params
 C_a = 1;
-C_r = 1;
+C_r = 3;
 l_a = 6;
-l_r = 0.5;
+l_r = 1;
 % random polarization params
 walk_amplitude = 0.5;
 walk_stdev = pi/4;
@@ -54,6 +55,23 @@ CS_Sigma = 1;
 CS_Gamma = 1.5;
 CS_threshold = 5;
 use_nearest_neighbors = true;
+
+% curvature alignment params
+if(FORCE_CURVATURE_ALIGNMENT_ON)
+    num_neighbors = 8; % used for curvature alignment
+else
+    num_neighbors = 1; % used as argument to knnsearch for closest mesh pt
+end
+
+% Supported modes:
+% 'gauss-min' - align in direction of minimum Gaussian curvature
+% 'gauss-max' - align in direction of maximum Gaussian curvature
+% 'gauss-zero' - align in direction of lowest absolute Gaussian curvature
+% 'mean-min' - align in direction of minimum mean curvature
+% 'mean-max' - align in direction of maximum mean curvature
+% 'mean-zero' - align in direction of lowest absolute mean curvature
+alignment_mode = 'gauss-min';
+alignment_magnitude = 0.4;
 % preallocate state variables
 P = zeros(N, 3);
 prev_EF_buffer = zeros(N, 3);
@@ -152,7 +170,7 @@ itr = 0;
 
 while t < totT
     % initialize nearest neighbors array
-    [indexes, dists] = all_mesh_neighbors(X, mesh_x, mesh_y, mesh_z);
+    [indices, dists] = all_mesh_neighbors(X, mesh_x, mesh_y, mesh_z, num_neighbors);
     
     % compute updated state vectors
     for i = 1 : N
@@ -212,7 +230,7 @@ while t < totT
             dPdt = [0 0 0];
             % compute the Cucker-Smale polarity
             if(use_nearest_neighbors)
-                particle_indices = find_neighbors(X, indexes, dists, dist_mat, i, CS_threshold);
+                particle_indices = find_neighbors(X, indices(:, 1), dists(:, 1), dist_mat, i, CS_threshold);
             else
                 particle_indices = setdiff(1:N, i);
             end
@@ -226,10 +244,34 @@ while t < totT
                 dPdt = dPdt + (1/sz) .* CS_H .* (prev_p_j - prev_p_i);
             end
             deltaP = deltaT * dPdt;
-            prev_CS(i, :) = deltaP;
+            prev_CS_buffer(i, :) = deltaP;
             P(i, :) = P(i, :) + deltaP;
         end
                 
+        if(FORCE_CURVATURE_ALIGNMENT_ON)
+            neighbor_indices = indices(i, :);
+            switch alignment_mode
+                case 'gauss-min'
+                    [~, neighbor_idx] = min(G_curvature(neighbor_indices));
+                case 'gauss-max'
+                    [~, neighbor_idx] = max(G_curvature(neighbor_indices));
+                case 'gauss-zero'
+                    [~, neighbor_idx] = min(abs(G_curvature(neighbor_indices)));
+                case 'mean-min'
+                    [~, neighbor_idx] = min(M_curvature(neighbor_indices));
+                case 'mean-max'
+                    [~, neighbor_idx] = max(M_curvature(neighbor_indices));
+                case 'mean-zero'
+                    [~, neighbor_idx] = min(abs(M_curvature(neighbor_indices)));
+                otherwise
+                    error("Invalid curvature alignment mode.");
+            end
+            neighbor_point_idx = neighbor_indices(neighbor_idx);
+            direction = [mesh_x(neighbor_point_idx) mesh_y(neighbor_point_idx) mesh_z(neighbor_point_idx)] - X(i, :);
+            direction = direction/norm(direction);
+            deltaP = direction * alignment_magnitude;
+            P(i, :) = P(i, :) + deltaP;
+        end
 
         dFdq_i_a = -4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*q(1);
         dFdq_i_R = 4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*q(2) - 8*q(2)*(X(i,1)^2 + X(i,2)^2); 
