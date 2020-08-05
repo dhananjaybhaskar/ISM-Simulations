@@ -18,15 +18,15 @@ N = 80;
 
 % general params
 deltaT = 0.1;
-totT = 30;
+totT = 60;
 
 
 % toggle interaction forces
 FORCE_EUCLIDEAN_REPULSION_ON = false;
 FORCE_ATTR_REPULSION_ON = true;
-FORCE_RANDOM_POLARITY_ON = false;
+FORCE_RANDOM_POLARITY_ON = true;
 FORCE_CUCKER_SMALE_POLARITY_ON = false;
-FORCE_CURVATURE_ALIGNMENT_ON = true;
+FORCE_CURVATURE_ALIGNMENT_ON = false;
 
 % init positions
 X = zeros(N, 3);
@@ -37,12 +37,12 @@ Sigma = 0.5;
 phi = 1;
 
 % Attraction-repulsion force params
-C_a = 1;
+C_a = 10;
 C_r = 3;
 l_a = 6;
 l_r = 1;
 % random polarization params
-walk_amplitude = 0.5;
+walk_amplitude = 0.15;
 walk_stdev = pi/4;
 walk_direction = rand(N, 1) * 2 * pi;
 num_repolarization_steps = 10;
@@ -50,9 +50,9 @@ init_repolarization_offset = floor(rand(N, 1) * num_repolarization_steps);
 num_trailing_positions = 40;
 
 % Cucker-Smale polarization/flocking params
-CS_K = 2;
+CS_K = 4;
 CS_Sigma = 1;
-CS_Gamma = 1.5;
+CS_Gamma = 1;
 CS_threshold = 5;
 use_nearest_neighbors = true;
 
@@ -70,8 +70,8 @@ end
 % 'mean-min' - align in direction of minimum mean curvature
 % 'mean-max' - align in direction of maximum mean curvature
 % 'mean-zero' - align in direction of lowest absolute mean curvature
-alignment_mode = 'gauss-min';
-alignment_magnitude = 0.4;
+alignment_mode = 'gauss-zero';
+alignment_magnitude = 0.3;
 % preallocate state variables
 P = zeros(N, 3);
 prev_EF_buffer = zeros(N, 3);
@@ -302,7 +302,7 @@ while t < totT
     % visualize_surface(X, itr, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
     % visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
     % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
-    % visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
+%     visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
     visualize_trajectories(X, itr, prev_paths, path_colors, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
 
 end

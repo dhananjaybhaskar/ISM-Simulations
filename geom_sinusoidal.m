@@ -14,14 +14,15 @@ N = 50;
 
 % general params
 deltaT = 0.1;
-totT = 60;
+totT = 30;
 
 
 % toggle interaction forces
 FORCE_EUCLIDEAN_REPULSION_ON = false;
-FORCE_ATTR_REPULSION_ON = true;
-FORCE_RANDOM_POLARITY_ON = true;
-FORCE_CUCKER_SMALE_POLARITY_ON = true;
+FORCE_ATTR_REPULSION_ON = false;
+FORCE_RANDOM_POLARITY_ON = false;
+FORCE_CUCKER_SMALE_POLARITY_ON = false;
+FORCE_CURVATURE_ALIGNMENT_ON = true;
 
 % init positions
 X = zeros(N, 3);
@@ -50,6 +51,22 @@ CS_Sigma = 1;
 CS_Gamma = 1.5;
 CS_threshold = 5;
 use_nearest_neighbors = true;
+
+if(FORCE_CURVATURE_ALIGNMENT_ON)
+    num_neighbors = 8; % used for curvature alignment
+else
+    num_neighbors = 1; % used as argument to knnsearch for closest mesh pt
+end
+
+% Supported modes:
+% 'gauss-min' - align in direction of minimum Gaussian curvature
+% 'gauss-max' - align in direction of maximum Gaussian curvature
+% 'gauss-zero' - align in direction of lowest absolute Gaussian curvature
+% 'mean-min' - align in direction of minimum mean curvature
+% 'mean-max' - align in direction of maximum mean curvature
+% 'mean-zero' - align in direction of lowest absolute mean curvature
+alignment_mode = 'gauss-min';
+alignment_magnitude = 0.02;
 
 % preallocate state variables
 P = zeros(N, 3);
@@ -138,13 +155,13 @@ M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
 % visualize_surface(X, 0, vis_x, vis_y, vis_z, [-5 30], [-5 30], [-10 10]);
 % visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-5 30], [-5 30], [-10 10]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-5 30], [-5 30], [-10 10], dist_range, dist_mat);
-% visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-5 30], [-5 30], [-10 10], G_color_limits, G_curvature, true);
-visualize_trajectories(X, 0, prev_paths, path_colors, vis_x, vis_y, vis_z, [-5 30], [-5 30], [-10 10]);
+visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-5 30], [-5 30], [-10 10], G_color_limits, G_curvature, true);
+% visualize_trajectories(X, 0, prev_paths, path_colors, vis_x, vis_y, vis_z, [-5 30], [-5 30], [-10 10]);
 t = 0;
 itr = 0;
 
 while t < totT
-    [indexes, dists] = all_mesh_neighbors(X, mesh_x, mesh_y, mesh_z);
+    [indices, dists] = all_mesh_neighbors(X, mesh_x, mesh_y, mesh_z, num_neighbors);
     % compute updated state vectors
     for i = 1 : N
         F(i) = (X(i,3)) - b * sin(X(i,2)/a) * sin(X(i, 1)/a);
@@ -203,7 +220,7 @@ while t < totT
             dPdt = [0 0 0];
             % compute the Cucker-Smale polarity
             if(use_nearest_neighbors)
-                particle_indices = find_neighbors(X, indexes, dists, dist_mat, i, CS_threshold);
+                particle_indices = find_neighbors(X, indices(:, 1), dists(:, 1), dist_mat, i, CS_threshold);
             else
                 particle_indices = setdiff(1:N, i);
             end
@@ -217,7 +234,31 @@ while t < totT
                 dPdt = dPdt + (1/sz) .* CS_H .* (prev_p_j - prev_p_i);
             end
             deltaP = deltaT * dPdt;
-            prev_CS(i, :) = deltaP;
+            prev_CS_buffer(i, :) = deltaP;
+            P(i, :) = P(i, :) + deltaP;
+        end
+        if(FORCE_CURVATURE_ALIGNMENT_ON)
+            neighbor_indices = indices(i, :);
+            switch alignment_mode
+                case 'gauss-min'
+                    [~, neighbor_idx] = min(G_curvature(neighbor_indices));
+                case 'gauss-max'
+                    [~, neighbor_idx] = max(G_curvature(neighbor_indices));
+                case 'gauss-zero'
+                    [~, neighbor_idx] = min(abs(G_curvature(neighbor_indices)));
+                case 'mean-min'
+                    [~, neighbor_idx] = min(M_curvature(neighbor_indices));
+                case 'mean-max'
+                    [~, neighbor_idx] = max(M_curvature(neighbor_indices));
+                case 'mean-zero'
+                    [~, neighbor_idx] = min(abs(M_curvature(neighbor_indices)));
+                otherwise
+                    error("Invalid curvature alignment mode.");
+            end
+            neighbor_point_idx = neighbor_indices(neighbor_idx);
+            direction = [mesh_x(neighbor_point_idx) mesh_y(neighbor_point_idx) mesh_z(neighbor_point_idx)] - X(i, :);
+            direction = direction/norm(direction);
+            deltaP = direction * alignment_magnitude;
             P(i, :) = P(i, :) + deltaP;
         end
         
@@ -250,8 +291,8 @@ while t < totT
 %     visualize_surface(X, itr, vis_x, vis_y, vis_z, [-5 30], [-5 30], [-10 10]);
     % visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-5 30], [-5 30], [-10 10]);
     % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-5 30], [-5 30], [-10 10], dist_range, dist_mat);
-    % visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-5 30], [-5 30], [-10 10], G_color_limits, G_curvature, true);
-    visualize_trajectories(X, itr, prev_paths, path_colors, vis_x, vis_y, vis_z, [-5 30], [-5 30], [-10 10]);
+    visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-5 30], [-5 30], [-10 10], G_color_limits, G_curvature, true);
+%     visualize_trajectories(X, itr, prev_paths, path_colors, vis_x, vis_y, vis_z, [-5 30], [-5 30], [-10 10]);
 end
 
 function [adj_mat] = adj_mat_alternating_mountain(x, y, z)
