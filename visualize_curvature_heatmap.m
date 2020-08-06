@@ -12,7 +12,7 @@ function visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y
     ylim(y_limits)
     zlim(z_limits)
     if display_particles
-        scatter3(X(:,1), X(:,2), X(:,3), 30, 'filled');
+        scatter3(X(:,1), X(:,2), X(:,3), 30, 'ro', 'filled');
     end
     colorbar
     caxis(color_limits)

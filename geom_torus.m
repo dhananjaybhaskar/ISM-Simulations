@@ -1,43 +1,79 @@
 %
 % Agent-based model of particle movement on implicit surface (torus)
 % Authors: Dhananjay Bhaskar, Tej Stead
-% Last Modified: Jul 11, 2020
+% Last Modified: Aug 5, 2020
 % Reference: Using Particles to Sample and Control Implicit Surfaces
 % Andrew P. Witkin and Paul S. Heckbert, Proc. SIGGRAPH '94
-% Generate movie using ffmpeg:
-% ffmpeg -r 10 -i sim_%03d.png -vcodec libx264 -y -an sim_movie.mp4 -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2"
 %
+
+close all; clear all;
 
 % seed RNG
 rng(42)
 
 % number of particles
-N = 200;
+N = 120;
 
-% params
-Alpha = 2;
-Sigma = 0.5;
-phi = 1;
+% simulation params
 deltaT = 0.1;
-totT = 10;
-num_repolarization_steps = 10;
-num_trailing_positions = 40;
+totT = 80;
+phi = 1;
 
 % toggle interaction forces
 FORCE_EUCLIDEAN_REPULSION_ON = false;
+FORCE_ATTR_REPULSION_ON = true;
 FORCE_RANDOM_POLARITY_ON = true;
+FORCE_CUCKER_SMALE_POLARITY_ON = false;
+FORCE_CURVATURE_ALIGNMENT_ON = false;
 
 % init positions
 X = zeros(N, 3);
 
+% euclidean repulsion params
+Alpha = 2;
+Sigma = 0.5;
+
+% attraction-repulsion params
+C_a = 200;
+C_r = 200;
+l_a = 1;
+l_r = 0.3;
+
 % random polarization params
-walk_amplitude = 0.3;
+walk_amplitude = 0.1;
 walk_stdev = pi/4;
 walk_direction = rand(N, 1) * 2 * pi;
+num_repolarization_steps = 10;
+num_trailing_positions = 40;
+
 init_repolarization_offset = floor(rand(N, 1) * num_repolarization_steps);
+
+% Cucker-Smale params
+CS_K = 30;
+CS_Sigma = 1;
+CS_Gamma = 0.8;
+CS_NN_threshold = 5;
+USE_NEAREST_NEIGHBORS = false;
+
+% Curvature alignment params
+num_neighbors = 1;                  % argument in knnsearch to find closest mesh pt
+if(FORCE_CURVATURE_ALIGNMENT_ON)
+    num_neighbors = 8;
+end
+
+% Supported modes:
+% 'gauss-min' - align in direction of minimum Gaussian curvature
+% 'gauss-max' - align in direction of maximum Gaussian curvature
+% 'gauss-zero' - align in direction of lowest absolute Gaussian curvature
+% 'mean-min' - align in direction of minimum mean curvature
+% 'mean-max' - align in direction of maximum mean curvature
+% 'mean-zero' - align in direction of lowest absolute mean curvature
+alignment_mode = 'gauss-zero';
+alignment_magnitude = 0.3;
 
 % preallocate state variables
 P = zeros(N, 3);
+PV = zeros(N, 3);
 q = [2, 5];
 Q = [0.0, 0.0];
 F = zeros(N, 1);
@@ -123,12 +159,13 @@ t = 0;
 itr = 0;
 
 while t < totT
+    
+    % initialize nearest neighbors array
+    [indices, dists] = all_mesh_neighbors(X, mesh_x, mesh_y, mesh_z, num_neighbors);
 
     % compute updated state vectors
     for i = 1 : N
-
-        P(i,:) = [0, 0, 0];
-
+        
         F(i) = (X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)^2 - 4*q(2)^2*(X(i,1)^2 + X(i,2)^2);
 
         dFdX_i_x = 4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*X(i,1) - 8*q(2)^2*X(i,1);
@@ -137,14 +174,34 @@ while t < totT
         dFdX(i,:) = [dFdX_i_x, dFdX_i_y, dFdX_i_z];
         
         if (FORCE_EUCLIDEAN_REPULSION_ON)
-            for j = 1 : N
+            for j = setdiff(1:N, i)
                 Fij = Alpha*exp(-1.0*(norm((X(i,:)-X(j,:)))^2)/(2*Sigma^2));
-                P(i,:) = P(i,:) + (X(i,:) - X(j,:))*Fij;
+                deltaP = (X(i,:) - X(j,:))*Fij;
+                P(i, :) = P(i, :) + deltaP;
             end
         end
         
+        if (FORCE_ATTR_REPULSION_ON) 
+            dPdt = 0;
+            if(N > 1)
+                for j = setdiff(1:N, i)                     % skip element i 
+                    diff = X(i, :) - X(j, :);
+                    dist = norm(diff);
+                    grad_x = ((C_a * diff(1) * exp(-1 * (dist/l_a)))/(l_a * dist)) ...
+                        - ((C_r * diff(1) * exp(-1 * (dist/l_r)))/(l_r * dist));
+                    grad_y = ((C_a * diff(2) * exp(-1 * (dist/l_a)))/(l_a * dist)) ...
+                        - ((C_r * diff(2) * exp(-1 * (dist/l_r)))/(l_r * dist));
+                    grad_z = ((C_a * diff(3) * exp(-1 * (dist/l_a)))/(l_a * dist)) ...
+                        - ((C_r * diff(3) * exp(-1 * (dist/l_r)))/(l_r * dist));
+                    dPdt = dPdt - (1/(N - 1)) * [grad_x grad_y grad_z];
+                end
+            end
+            deltaP = deltaT * dPdt;
+            P(i, :) = P(i, :) + deltaP;
+        end
+        
         if (FORCE_RANDOM_POLARITY_ON)
-            nullspace = [dFdX(i,:)' zeros(3,2)];
+            nullspace = [dFdX(i,:); zeros(2,3)];
             assert(numel(nullspace) == 9, "Nullspace computation error.");
             nullspace = null(nullspace);
             nullspace = nullspace';
@@ -152,8 +209,54 @@ while t < totT
                 temp = rand();
                 walk_direction(i) = walk_direction(i) + norminv(temp, 0, walk_stdev);
             end
-            P(i,:) = P(i,:) + cos(walk_direction(i)) * nullspace(1, :) * walk_amplitude;
-            P(i,:) = P(i,:) + sin(walk_direction(i)) * nullspace(2, :) * walk_amplitude;
+            deltaP =  cos(walk_direction(i)) * nullspace(1, :) * walk_amplitude;
+            deltaP = deltaP + sin(walk_direction(i)) * nullspace(2, :) * walk_amplitude;
+            P(i, :) = P(i, :) + deltaP;
+        end
+        
+        if (FORCE_CUCKER_SMALE_POLARITY_ON)
+            if itr > 0
+                dPdt = [0 0 0];
+                if(USE_NEAREST_NEIGHBORS)
+                    particle_indices = find_neighbors(X, indices(:, 1), dists(:, 1), dist_mat, i, CS_NN_threshold);
+                else
+                    particle_indices = setdiff(1:N, i);
+                end
+                sz = numel(particle_indices);
+                for j = 1:sz
+                    idx = particle_indices(j);
+                    dist = norm(X(i, :) - X(idx, :));
+                    CS_H = CS_K/((CS_Sigma^2) + (dist^2))^CS_Gamma;
+                    dPdt = dPdt + (1/sz) .* CS_H .* (PV(idx,:) - PV(i,:));
+                end
+                deltaP = deltaT * dPdt;
+                P(i, :) = P(i, :) + deltaP;
+            end
+        end
+                
+        if(FORCE_CURVATURE_ALIGNMENT_ON)
+            neighbor_indices = indices(i, :);
+            switch alignment_mode
+                case 'gauss-min'
+                    [~, neighbor_idx] = min(G_curvature(neighbor_indices));
+                case 'gauss-max'
+                    [~, neighbor_idx] = max(G_curvature(neighbor_indices));
+                case 'gauss-zero'
+                    [~, neighbor_idx] = min(abs(G_curvature(neighbor_indices)));
+                case 'mean-min'
+                    [~, neighbor_idx] = min(M_curvature(neighbor_indices));
+                case 'mean-max'
+                    [~, neighbor_idx] = max(M_curvature(neighbor_indices));
+                case 'mean-zero'
+                    [~, neighbor_idx] = min(abs(M_curvature(neighbor_indices)));
+                otherwise
+                    error("Invalid curvature alignment mode.");
+            end
+            neighbor_point_idx = neighbor_indices(neighbor_idx);
+            direction = [mesh_x(neighbor_point_idx) mesh_y(neighbor_point_idx) mesh_z(neighbor_point_idx)] - X(i, :);
+            direction = direction/norm(direction);
+            deltaP = direction * alignment_magnitude;
+            P(i, :) = P(i, :) + deltaP;
         end
 
         dFdq_i_a = -4*(X(i,1)^2 + X(i,2)^2 + X(i,3)^2 + q(2)^2 - q(1)^2)*q(1);
@@ -163,20 +266,23 @@ while t < totT
         correction = (dot(dFdX(i,:), P(i,:)) + dot(dFdq(i,:), Q) + phi*F(i))/(norm(dFdX(i,:))^2);
         dXdt(i,:) = P(i,:) - correction*dFdX(i,:);
         
+        % store trajectories
         if(itr < num_trailing_positions)
             prev_paths(i, itr + 1, :) = X(i, :);
         else
             prev_paths(i, 1:(num_trailing_positions - 1), :) = prev_paths(i, 2:num_trailing_positions, :);
             prev_paths(i, num_trailing_positions, :) = X(i, :);
         end
-
+        
     end
     
-    % update position
+    % update position and forces
+    PV = dXdt;
     for i = 1 : N
         X(i,:) = X(i,:) + deltaT*dXdt(i,:);
     end
     
+    P = zeros(N, 3);
     t = t + deltaT;
     itr = itr + 1;
     

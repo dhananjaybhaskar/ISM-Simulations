@@ -2,7 +2,7 @@ function visualize_trajectories(X, itr, previous_steps, colors, vis_x, vis_y, vi
 
     fig = figure('visible', 'off'); 
     
-    h = mesh(vis_x, vis_y, vis_z, 'EdgeColor', 'none', 'FaceColor', [0.8, 0.8, 0.8], 'FaceAlpha', 1, 'linestyle', '-');
+    h = mesh(vis_x, vis_y, vis_z, 'EdgeColor', 'none', 'FaceColor', [0.7, 0.7, 0.7], 'FaceAlpha', 1, 'linestyle', '-');
     camlight
     h.FaceLighting = 'gouraud';
     h.AmbientStrength = 0.3;

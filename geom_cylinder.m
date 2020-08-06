@@ -88,7 +88,7 @@ M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
 % visualize_surface(X, 0, vis_x, vis_y, vis_z, [-30 30], [-30 30], [-10 120]);
 % visualize_geodesic_path(X, 0, [pt_1_idx pt_3_idx], [pt_2_idx pt_4_idx], vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_z_num, next, [-30 30], [-30 30], [-10 120]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-30 30], [-30 30], [-10 120], dist_range, dist_mat);
-visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-30 30], [-30 30], [-10 120], M_color_limits, M_curvature, false);
+visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-30 30], [-30 30], [-10 120], M_color_limits, M_curvature, true);
 
 t = 0;
 itr = 0;

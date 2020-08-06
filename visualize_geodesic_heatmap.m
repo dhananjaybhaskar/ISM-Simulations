@@ -22,8 +22,8 @@ function visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y,
     xlim(x_limits)
     ylim(y_limits)
     zlim(z_limits)
-    scatter3(X(:,1), X(:,2), X(:,3), 30, 'filled');
-    scatter3(source_pt_coords(1), source_pt_coords(2), source_pt_coords(3), 30, 'o', 'filled');
+    scatter3(X(:,1), X(:,2), X(:,3), 30, 'ro', 'filled');
+    scatter3(source_pt_coords(1), source_pt_coords(2), source_pt_coords(3), 30, 'mo', 'filled');
     colorbar
     caxis(color_limits)
     zoom(1.2)
