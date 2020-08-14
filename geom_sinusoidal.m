@@ -155,7 +155,7 @@ M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
 % visualize_surface(X, 0, vis_x, vis_y, vis_z, [-5 30], [-5 30], [-10 10]);
 % visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-5 30], [-5 30], [-10 10]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-5 30], [-5 30], [-10 10], dist_range, dist_mat);
-visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-5 30], [-5 30], [-10 10], G_color_limits, G_curvature, true);
+visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-5 30], [-5 30], [-10 10], G_color_limits, G_curvature, false); pause;
 % visualize_trajectories(X, 0, prev_paths, path_colors, vis_x, vis_y, vis_z, [-5 30], [-5 30], [-10 10]);
 t = 0;
 itr = 0;
@@ -339,16 +339,17 @@ function [curvature] = gaussian_curvature_sinusoidal(Theta_mesh_fine, Phi_mesh_f
     F = (b/a)^2 .* cos(u/a) .* sin(u/a) .* cos(v/a) .* sin(v/a);
     G = (b/a)^2 .*(sin(u/a).^2) .* (cos(v/a).^2) + 1;
     
-    A = (E .* G - L.^2);
-    B = (2 .* M .* F - L .* G - E .* L);
-    C = (L.^2 - M.^2);
+%     A = (E .* G - L.^2);
+%     B = (2 .* M .* F - L .* G - E .* L);
+%     C = (L.^2 - M.^2);
+%     
+%     assert(min(min(B.^2 - 4 .* A .* C)) > 0);
+%     
+%     curv_1 = ((-1 .* B) + sqrt(B.^2 - 4 .* A .* C))./(2 .* A);
+%     curv_2 = ((-1 .* B) - sqrt(B.^2 - 4 .* A .* C))./(2 .* A);
     
-    assert(min(min(B.^2 - 4 .* A .* C)) > 0);
-    
-    curv_1 = ((-1 .* B) + sqrt(B.^2 - 4 .* A .* C))./(2 .* A);
-    curv_2 = ((-1 .* B) - sqrt(B.^2 - 4 .* A .* C))./(2 .* A);
-    
-    curvature = curv_1 .* curv_2;
+%     curvature = curv_1 .* curv_2;
+      curvature = (L.^2 - M.^2)./(E.*G - F.^2);
     
 end
 
@@ -367,15 +368,17 @@ function [curvature] = mean_curvature_sinusoidal(Theta_mesh_fine, Phi_mesh_fine,
     F = (b/a)^2 .* cos(u/a) .* sin(u/a) .* cos(v/a) .* sin(v/a);
     G = (b/a)^2 .*(sin(u/a).^2) .* (cos(v/a).^2) + 1;
     
-    A = (E .* G - L.^2);
-    B = (2 .* M .* F - L .* G - E .* L);
-    C = (L.^2 - M.^2);
-    
-    assert(min(min(B.^2 - 4 .* A .* C)) > 0);
-    
-    curv_1 = ((-1 .* B) + sqrt(B.^2 - 4 .*A .* C))./(2 .* A);
-    curv_2 = ((-1 .* B) - sqrt(B.^2 - 4 .* A .* C))./(2 .* A);
-    
-    curvature = (curv_1 + curv_2) ./ 2;
+%     A = (E .* G - L.^2);
+%     B = (2 .* M .* F - L .* G - E .* L);
+%     C = (L.^2 - M.^2);
+%     
+%     assert(min(min(B.^2 - 4 .* A .* C)) > 0);
+%     
+%     curv_1 = ((-1 .* B) + sqrt(B.^2 - 4 .*A .* C))./(2 .* A);
+%     curv_2 = ((-1 .* B) - sqrt(B.^2 - 4 .* A .* C))./(2 .* A);
+%     
+%     curvature = (curv_1 + curv_2) ./ 2;
+
+    curvature = -1*(E.*L - 2.*F.*M + G.*L)./(2.*(E.*G - F.^2));
     
 end
