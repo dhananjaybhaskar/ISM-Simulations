@@ -18,12 +18,12 @@ function visualize_trajectories(X, itr, previous_steps, colors, vis_x, vis_y, vi
     zlim(z_limits)
     hold on;
     
-    scatter3(X(:,1), X(:,2), X(:,3), 30, 'filled');
+    scatter3(X(:,1), X(:,2), X(:,3), 30, 'MarkerEdgeColor', [.7 .3 0], 'MarkerFaceColor', [.9 .3 0], 'LineWidth', 1.0);
     for i = 1:length(X)
         plot3(previous_steps(i,:,1), previous_steps(i,:,2), previous_steps(i,:,3), 'LineWidth', 1.2, 'Color', colors(i, :));
     end
     
-    zoom(1.2)
+    zoom(1.3)
     set(gca, 'visible', 'off')
     fname = strcat('sim_', sprintf('%03d', itr), '.png');
     saveas(fig, fname, 'png');

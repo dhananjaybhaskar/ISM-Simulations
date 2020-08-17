@@ -12,11 +12,11 @@ function visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y
     ylim(y_limits)
     zlim(z_limits)
     if display_particles
-        scatter3(X(:,1), X(:,2), X(:,3), 30, 'ro', 'filled');
+        scatter3(X(:,1), X(:,2), X(:,3), 30, 'MarkerEdgeColor', [.7 .3 0], 'MarkerFaceColor', [.9 .3 0], 'LineWidth', 1.0);
     end
     colorbar
     caxis(color_limits)
-    zoom(1.2)
+    zoom(1.33)
     hold off;
     set(gca, 'visible', 'off')
     fname = strcat('sim_', sprintf('%03d', itr), '.png');

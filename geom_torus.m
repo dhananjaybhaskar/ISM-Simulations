@@ -16,31 +16,31 @@ N = 120;
 
 % simulation params
 deltaT = 0.1;
-totT = 80;
+totT = 95;
 phi = 1;
 
 % toggle interaction forces
 FORCE_EUCLIDEAN_REPULSION_ON = false;
-FORCE_ATTR_REPULSION_ON = true;
+FORCE_ATTR_REPULSION_ON = false;
 FORCE_RANDOM_POLARITY_ON = true;
 FORCE_CUCKER_SMALE_POLARITY_ON = false;
-FORCE_CURVATURE_ALIGNMENT_ON = false;
+FORCE_CURVATURE_ALIGNMENT_ON = true;
 
 % init positions
 X = zeros(N, 3);
 
 % euclidean repulsion params
-Alpha = 2;
+Alpha = 0.5;
 Sigma = 0.5;
 
 % attraction-repulsion params
-C_a = 200;
-C_r = 200;
+C_a = 80;
+C_r = 80;
 l_a = 1;
 l_r = 0.3;
 
 % random polarization params
-walk_amplitude = 0.1;
+walk_amplitude = 0.25;
 walk_stdev = pi/4;
 walk_direction = rand(N, 1) * 2 * pi;
 num_repolarization_steps = 10;
@@ -55,7 +55,7 @@ CS_Gamma = 0.8;
 CS_NN_threshold = 5;
 USE_NEAREST_NEIGHBORS = false;
 
-% Curvature alignment params
+% curvature alignment params
 num_neighbors = 1;                  % argument in knnsearch to find closest mesh pt
 if(FORCE_CURVATURE_ALIGNMENT_ON)
     num_neighbors = 8;
@@ -69,7 +69,7 @@ end
 % 'mean-max' - align in direction of maximum mean curvature
 % 'mean-zero' - align in direction of lowest absolute mean curvature
 alignment_mode = 'gauss-zero';
-alignment_magnitude = 0.3;
+alignment_magnitude = 0.15;
 
 % preallocate state variables
 P = zeros(N, 3);
@@ -83,7 +83,7 @@ dXdt = zeros(N, 3);
 
 % preallocate particle trajectories
 prev_paths = nan * ones(N, num_trailing_positions, 3);
-path_colors = hsv(N);
+path_colors = parula(N);
 
 % pick trajectory colors
 for i = 1:N
@@ -152,8 +152,8 @@ M_color_limits = [min(min(M_curvature)) max(max(M_curvature))];
 % visualize_surface(X, 0, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
 % visualize_geodesic_path(X, 0, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
 % visualize_geodesic_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
-% visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
-visualize_trajectories(X, 0, prev_paths, path_colors, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
+visualize_curvature_heatmap(X, 0, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
+% visualize_trajectories(X, 0, prev_paths, path_colors, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
 
 t = 0;
 itr = 0;
@@ -289,8 +289,8 @@ while t < totT
     % visualize_surface(X, itr, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
     % visualize_geodesic_path(X, itr, pt_1_idx, pt_2_idx, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, mesh_phi_num, next, [-10 10], [-10 10], [-3 3]);
     % visualize_geodesic_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, pt_1_idx, [-10 10], [-10 10], [-3 3], dist_range, dist_mat);
-    % visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
-    visualize_trajectories(X, itr, prev_paths, path_colors, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
+    visualize_curvature_heatmap(X, itr, vis_x, vis_y, vis_z, mesh_x, mesh_y, mesh_z, [-10 10], [-10 10], [-3 3], G_color_limits, G_curvature, true);
+    % visualize_trajectories(X, itr, prev_paths, path_colors, vis_x, vis_y, vis_z, [-10 10], [-10 10], [-3 3]);
 
 end
 

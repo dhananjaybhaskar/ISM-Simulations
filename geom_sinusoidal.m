@@ -178,16 +178,7 @@ function [curvature] = gaussian_curvature_sinusoidal(Theta_mesh_fine, Phi_mesh_f
     F = (b/a)^2 .* cos(u/a) .* sin(u/a) .* cos(v/a) .* sin(v/a);
     G = (b/a)^2 .*(sin(u/a).^2) .* (cos(v/a).^2) + 1;
     
-    A = (E .* G - L.^2);
-    B = (2 .* M .* F - L .* G - E .* L);
-    C = (L.^2 - M.^2);
-    
-    assert(min(min(B.^2 - 4 .* A .* C)) > 0);
-    
-    curv_1 = ((-1 .* B) + sqrt(B.^2 - 4 .* A .* C))./(2 .* A);
-    curv_2 = ((-1 .* B) - sqrt(B.^2 - 4 .* A .* C))./(2 .* A);
-    
-    curvature = curv_1 .* curv_2;
+    curvature = (L.^2 - M.^2)./(E.*G - F.^2);
     
 end
 
@@ -206,15 +197,6 @@ function [curvature] = mean_curvature_sinusoidal(Theta_mesh_fine, Phi_mesh_fine,
     F = (b/a)^2 .* cos(u/a) .* sin(u/a) .* cos(v/a) .* sin(v/a);
     G = (b/a)^2 .*(sin(u/a).^2) .* (cos(v/a).^2) + 1;
     
-    A = (E .* G - L.^2);
-    B = (2 .* M .* F - L .* G - E .* L);
-    C = (L.^2 - M.^2);
-    
-    assert(min(min(B.^2 - 4 .* A .* C)) > 0);
-    
-    curv_1 = ((-1 .* B) + sqrt(B.^2 - 4 .*A .* C))./(2 .* A);
-    curv_2 = ((-1 .* B) - sqrt(B.^2 - 4 .* A .* C))./(2 .* A);
-    
-    curvature = (curv_1 + curv_2) ./ 2;
+    curvature = -1*(E.*L - 2.*F.*M + G.*L)./(2.*(E.*G - F.^2));
     
 end
